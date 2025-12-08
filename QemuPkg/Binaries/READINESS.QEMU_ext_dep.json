@@ -1,0 +1,14 @@
+{
+    "scope": "qemu",
+    "type": "web",
+    "name": "READINESS.QEMU",
+    "source": "https://github.com/OpenDevicePartnership/patina-readiness-tool/releases/download/0.1.0/patina_readiness_tool.zip",
+    "version": "0.1.0",
+    "sha256": "8a739dd897c3b9a628db57283f1a06bb992a305f5793e468c8de71e44e2994b5",
+    "internal_path": "/",
+    "compression_type": "zip",
+    "flags": [
+        "set_build_var"
+    ],
+    "var_name": "BLD_*_DXE_READINESS_TOOL_PATH"
+}
