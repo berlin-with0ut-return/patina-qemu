@@ -47,10 +47,12 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
             os: 'windows-latest'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
@@ -58,24 +60,28 @@ jobs:
             platform: 'Q35'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'Q35'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             architecture: 'IA32,X64'
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             architecture: 'IA32,X64'
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -83,6 +89,7 @@ jobs:
             platform: 'Q35'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -90,18 +97,21 @@ jobs:
             platform: 'Q35'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
 
     steps:
       # Checkout the repository to the runner or container
@@ -155,7 +165,7 @@ jobs:
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
           flash: 'true'
-          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE="QemuPkg\Binaries\READINESS.QEMU_extdep\capture\x64_64\qemu_dxe_readiness_capture.efi" '
+          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
           publish-logs: 'true'
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
