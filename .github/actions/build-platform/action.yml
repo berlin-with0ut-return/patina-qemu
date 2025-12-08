@@ -126,6 +126,7 @@ runs:
       else 
         stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
         $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}")
+      fi
   
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
