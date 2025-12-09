@@ -39,10 +39,6 @@ inputs:
     description: 'Whether to publish build logs'
     required: false
     default: 'false'
-  redirect-output: 
-    description: 'Whether to direct serial/stdout to a file'
-    required: 'false'
-    default: 'false'
 
 runs:
   using: composite
@@ -53,7 +49,8 @@ runs:
     id: tempdir
     shell: bash
     run: |
-      if [ "${{ inputs.publish-logs }}" != "false" ] || [ "${{ inputs.redirect-output }}" != "false" ]; then
+      # if publish-logs is true, create a temp dir to capture logs
+      if [ "${{ inputs.publish-logs }}" != "false" ]; then
         mkdir -p "$RUNNER_TEMP"/build-logs
         echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
       else
@@ -115,18 +112,10 @@ runs:
   
   # Build the platform, specify architecture if it is not empty
   - name: Build platform (stuart_build)
-    id: build
     shell: bash
     run: |
-      if [ "${{ inputs.redirect-output }}" = "true" ]; then
-        LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.json"
-        stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
-        $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
-        echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
-      else 
-        stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
-        $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}")
-      fi
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
+      $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}")
   
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
@@ -144,21 +133,7 @@ runs:
       else
         echo "No matching log files found"
       fi
-
-  # Optional: Run readiness tool
-  - name: Run readiness tool
-    shell: cmd
-    run: |
-      if not "%steps.build.outputs.logfile%"=="" (
-          if "%inputs.architecture%"=="ARM64" (
-              QemuPkg\Binaries\READINESS.QEMU_extdep\validator\dxe_readiness_validator_aarch64.exe -f "%steps.build.outputs.logfile%"
-          ) else (
-              if not "%inputs.architecture%"=="" (
-                  QemuPkg\Binaries\READINESS.QEMU_extdep\validator\dxe_readiness_validator_x86-64.exe -f "%steps.build.outputs.logfile%"
-              )
-          )
-      )
-
+  
   # Optional: Flash the platform if requested
   - name: Flash platform (stuart_build --FLASHONLY)
     if: ${{ inputs.flash != 'false' }}

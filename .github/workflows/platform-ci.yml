@@ -142,7 +142,7 @@ jobs:
       
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
       - name: Build and Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform
+        uses: ./.github/actions/build-platform/action.yml
         with:
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
@@ -156,7 +156,7 @@ jobs:
 
       # Run the readiness tool
       - name: Readines Tool ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform
+        uses: ./.github/actions/build-platform/readiness.yml
         with:
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
@@ -165,7 +165,6 @@ jobs:
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
-          redirect-output: 'true'
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.

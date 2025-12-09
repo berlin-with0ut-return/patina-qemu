@@ -1,0 +1,170 @@
+# A callable Github Action to build a Patina QEMU platform firmware that supports the stuart build system.
+#
+##
+# Copyright (c) Microsoft Corporation.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+name: Build QEMU Readiness Tool
+description: Test QEMU platform requirements
+
+inputs:
+  platform-config:
+    description: 'Path to the Stuart platform configuration file (.py)'
+    required: true
+  platform-name:
+    description: 'Name of the platform being built (for logging purposes)'
+    required: true
+  target:
+    description: 'Build target (e.g., DEBUG, RELEASE)'
+    required: false
+    default: 'DEBUG'
+  tool-chain:
+    description: 'Tool chain to use (e.g., VS2022, GCC)'
+    required: false
+    default: 'VS2022'
+  architecture:
+    description: 'Target architecture (e.g., X64; IA32,X64; ARM64). By default, uses the architectures defined in the platform config.'
+    required: false
+    default: ''
+  stuart-args:
+    description: 'Additional build arguments to pass to stuart_build'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+
+  steps:
+  # Create a temporary directory for capture output
+  - name: Create Temporary Directory
+    id: tempdir
+    shell: bash
+    run: |
+      mkdir -p "$RUNNER_TEMP"/build-logs
+      echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
+
+  # Cannot use ENV in a composite action, so lets create our reusable argument string here
+  - name: Setup Total Stuart arguments
+    id: stuart
+    shell: bash
+    run: |
+      ARGS="TARGET=${{ inputs.target }} TOOL_CHAIN_TAG=${{ inputs.tool-chain }} ${{ inputs.stuart-args }}"
+      echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
+  # Create a cache key based on the submodule hashes to speed up repeated builds
+  - name: Gather submodule hashes
+    id: submodules-hash
+    shell: bash
+    run: |
+      HASH=$(git submodule foreach --quiet 'echo $sha1' | sha256sum | awk '{print $1}')
+      echo "hash=$HASH" >> $GITHUB_OUTPUT
+  
+  # Use the cache key to attempt to restore cached submodules
+  - name: Cache submodules
+    uses: actions/cache@v4
+    with:
+      path: .git/modules
+      key: ${{ runner.os }}-${{ inputs.platform-name }}-submodules-${{ steps.submodules-hash.outputs.hash}}
+
+  # Stuart setup should be slightly faster if we were able to restore the cache to .git/modules
+  - name: Download required submodules (stuart_setup)
+    shell: bash
+    run: |
+      stuart_setup -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
+  
+  # Download external dependencies
+  - name: Download external dependencies (stuart_update)
+    shell: bash
+    run: |
+      stuart_update -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
+    
+  # Build the platform with capture
+  - name: Build platform (stuart_build)
+    id: build
+    shell: bash
+    run: |
+      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.json"
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
+      $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
+      echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
+  
+  # Optional: Move the build logs to the temporary directory if it was created
+  - name: Move build log
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    shell: bash
+    env:
+      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
+    run: |
+      shopt -s globstar nullglob
+      files=(**/BUILDLOG* **/BUILD_REPORT.TXT **/OVERRIDELOG.TXT)
+
+      if ((${#files[@]})); then
+        echo "Moving ${#files[@]} log files"
+        mv "${files[@]}" "$TEMP_DIR"
+      else
+        echo "No matching log files found"
+      fi
+
+  - name: Extract JSON block from logfile
+    shell: powershell
+    run: |
+      $logfile = "${{ steps.build.outputs.logfile }}"
+      $json_output = "${{ steps.tempdir.outputs.path }}\efi_output.json"
+
+      # Read the whole file as a single string
+      $content = Get-Content -Raw $logfile
+
+      # Find first { and last } and extract the block
+      $start = $content.IndexOf("{")
+      $end = $content.LastIndexOf("}")
+      if ($start -ge 0 -and $end -ge $start) {
+          $json_block = $content.Substring($start, $end - $start + 1)
+          $json_block | Set-Content $json_output -Encoding utf8
+          Write-Output "Filtered JSON written to $json_output"
+      } else {
+          Write-Error "No JSON block found in logfile"
+          exit 1
+      }
+
+  # Optional: Run readiness tool
+  - name: Run readiness validator
+    shell: powershell
+    run: |
+      $logfile = "${{ steps.build.outputs.logfile }}"
+      $arch = "${{ inputs.architecture }}"
+      $jsonFile = Join-Path "${{ steps.tempdir.outputs.path }}" "efi_output.json"
+      if ($logfile -ne "") {
+          if ($arch -eq "ARM64") {
+              & "QemuPkg\Binaries\READINESS.QEMU_extdep\validator\dxe_readiness_validator_aarch64.exe" -f $jsonFile
+          }
+          elseif ($arch -ne "") {
+              & "QemuPkg\Binaries\READINESS.QEMU_extdep\validator\dxe_readiness_validator_x86-64.exe" -f $jsonFile
+          }
+      }
+
+  # Optional: Move the run logs to the temporary directory if it was created
+  - name: Move run log
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    shell: bash
+    env:
+      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
+    run: |
+      shopt -s globstar nullglob
+      files=(**/*Run.txt)
+
+      if ((${#files[@]})); then
+        echo "Moving ${#files[@]} log files"
+        mv "${files[@]}" "$TEMP_DIR"
+      else
+        echo "No matching log files found"
+      fi
+
+  # Optional: Publish the logs as an artifact if the temporary directory was created
+  - name: Publish Logs
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    uses: actions/upload-artifact@v4
+    with:
+      # Specify architecture if it is not empty
+      name: readiness-logs-${{ inputs.platform-name }}-${{ inputs.target }}-${{ inputs.tool-chain }}${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}
+      path: ${{ steps.tempdir.outputs.path }}
