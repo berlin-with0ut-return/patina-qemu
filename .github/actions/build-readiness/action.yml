@@ -84,7 +84,7 @@ runs:
     id: build
     shell: bash
     run: |
-      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.json"
+      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.txt"
       stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
       $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
       echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
@@ -135,7 +135,7 @@ runs:
         if [ "$arch" = "ARM64" ]; then
           chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe
           ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe -f "$json_file"
-        elif [ -n "$arch" ]; then
+        elif [ "$arch" = "X64" ]; then
           chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe
           ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe -f "$json_file"
         fi
