@@ -107,25 +107,21 @@ runs:
       fi
 
   - name: Extract JSON block from logfile
-    shell: powershell
+    shell: bash
     run: |
-      $logfile = "${{ steps.build.outputs.logfile }}"
-      $json_output = "${{ steps.tempdir.outputs.path }}\efi_output.json"
+      logfile="${{ steps.build.outputs.logfile }}"
+      json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
-      # Read the whole file as a single string
-      $content = Get-Content -Raw $logfile
-
-      # Find first { and last } and extract the block
-      $start = $content.IndexOf("{")
-      $end = $content.LastIndexOf("}")
-      if ($start -ge 0 -and $end -ge $start) {
-          $json_block = $content.Substring($start, $end - $start + 1)
-          $json_block | Set-Content $json_output -Encoding utf8
-          Write-Output "Filtered JSON written to $json_output"
-      } else {
-          Write-Error "No JSON block found in logfile"
-          exit 1
-      }
+      # Extract content from first { to last } using sed
+      sed -n '/^{/,/^}/p' "$logfile" > "$json_output"
+      
+      # Verify JSON was extracted
+      if [ -s "$json_output" ] && grep -q '{' "$json_output" && grep -q '}' "$json_output"; then
+        echo "Filtered JSON written to $json_output"
+      else
+        echo "Error: No JSON block found in logfile" >&2
+        exit 1
+      fi
 
   # Optional: Run readiness tool
   - name: Run readiness validator
