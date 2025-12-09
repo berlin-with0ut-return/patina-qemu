@@ -142,7 +142,7 @@ jobs:
       
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
       - name: Build and Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform/action.yml
+        uses: ./.github/actions/build-platform/
         with:
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
@@ -156,7 +156,7 @@ jobs:
 
       # Run the readiness tool
       - name: Readines Tool ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform/readiness.yml
+        uses: ./.github/actions/build-readiness/
         with:
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
