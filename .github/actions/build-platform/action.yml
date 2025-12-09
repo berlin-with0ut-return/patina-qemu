@@ -53,8 +53,7 @@ runs:
     id: tempdir
     shell: bash
     run: |
-      # if publish-logs is true, create a temp dir to capture logs
-      if [ "${{ inputs.publish-logs }}" != "false" ]; then
+      if [ "${{ inputs.publish-logs }}" != "false" ] || [ "${{ inputs.redirect-output }}" != "false" ]; then
         mkdir -p "$RUNNER_TEMP"/build-logs
         echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
       else
@@ -116,10 +115,11 @@ runs:
   
   # Build the platform, specify architecture if it is not empty
   - name: Build platform (stuart_build)
+    id: build
     shell: bash
     run: |
       if [ "${{ inputs.redirect-output }}" = "true" ]; then
-        LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output.json"
+        LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.json"
         stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
         $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
         echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT

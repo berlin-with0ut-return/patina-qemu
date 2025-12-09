@@ -166,7 +166,6 @@ jobs:
           architecture: ${{ matrix.architecture || '' }}
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
           redirect-output: 'true'
-          publish-logs: 'true'
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.
