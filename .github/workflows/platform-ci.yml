@@ -44,16 +44,14 @@ jobs:
         include:
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
-            architecture: 'X64'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
+            readiness: 'X64'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
             os: 'windows-latest'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
@@ -61,7 +59,7 @@ jobs:
             platform: 'Q35'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
+            readiness: 'X64'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -101,19 +99,18 @@ jobs:
             readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
-            architecture: 'ARM64'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
+            readiness: 'ARM64'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
+            readiness: 'ARM64'
 
     steps:
       # Checkout the repository to the runner or container
@@ -157,7 +154,7 @@ jobs:
           publish-logs: 'true'
 
       # Run the readiness tool
-      - name: Readines Tool ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      - name: Readiness Tool ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
         uses: ./.github/actions/build-readiness/
         with:
           platform-config: ${{ matrix.config }}
@@ -166,7 +163,17 @@ jobs:
           tool-chain: ${{ matrix.tool-chain }}
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
-          stuart-args: 'BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
+          readiness: ${{ matrix.readiness }}
+          stuart-args: >-
+            ${{
+              matrix.architecture == 'X64' &&
+              'BLD_*_DXE_CORE_BINARY_OVERRIDE=QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi'
+              ||
+              matrix.architecture == 'ARM64' &&
+              'BLD_*_DXE_CORE_BINARY_OVERRIDE=QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
+              ||
+              ''
+            }}
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.

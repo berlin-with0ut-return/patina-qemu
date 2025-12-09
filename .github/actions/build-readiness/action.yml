@@ -23,8 +23,8 @@ inputs:
     description: 'Tool chain to use (e.g., VS2022, GCC)'
     required: false
     default: 'VS2022'
-  architecture:
-    description: 'Target architecture (e.g., X64; IA32,X64; ARM64). By default, uses the architectures defined in the platform config.'
+  readiness-arch:
+    description: 'Architecture (X64 or ARM64) to run readiness tool.
     required: false
     default: ''
   stuart-args:
@@ -128,7 +128,7 @@ runs:
     shell: bash
     run: |
       logfile="${{ steps.build.outputs.logfile }}"
-      arch="${{ inputs.architecture }}"
+      arch="${{ inputs.readiness }}"
       json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
       
       if [ -n "$logfile" ]; then
