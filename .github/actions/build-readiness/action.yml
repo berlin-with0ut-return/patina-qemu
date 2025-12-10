@@ -84,8 +84,8 @@ runs:
     id: build
     shell: bash
     run: |
-      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}.txt"
-      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
+      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}.txt"
+      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} \
       $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
       echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
   
