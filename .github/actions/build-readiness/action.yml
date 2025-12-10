@@ -89,7 +89,7 @@ runs:
 
   # Capture output
   - name: Build platform (stuart_build)
-    id: build
+    id: build-and-run
     shell: bash
     run: |
       LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}.txt"
@@ -118,7 +118,7 @@ runs:
   - name: Extract JSON block from logfile
     shell: bash
     run: |
-      logfile="${{ steps.build.outputs.logfile }}"
+      logfile="${{ steps.build-and-run.outputs.logfile }}"
       json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
       # Extract content from first { to last } using sed
@@ -136,7 +136,7 @@ runs:
   - name: Run readiness validator
     shell: bash
     run: |
-      logfile="${{ steps.build.outputs.logfile }}"
+      logfile="${{ steps.build-and-run.outputs.logfile }}"
       arch="${{ inputs.readiness }}"
       json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
       
