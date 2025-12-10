@@ -23,8 +23,8 @@ inputs:
     description: 'Tool chain to use (e.g., VS2022, GCC)'
     required: false
     default: 'VS2022'
-  readiness-arch:
-    description: 'Architecture (X64 or ARM64) to run readiness tool.
+  readiness:
+    description: 'Version of readiness tool (X64 or ARM64) to run.'
     required: false
     default: ''
   stuart-args:
