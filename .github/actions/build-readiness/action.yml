@@ -79,15 +79,24 @@ runs:
     run: |
       stuart_update -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
     
-  # Build the platform with capture
+  # Build the platform
+  - name: Build platform (stuart_build)
+    id: build
+    shell: bash
+    run: |
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
+      $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") 
+
+  # Capture output
   - name: Build platform (stuart_build)
     id: build
     shell: bash
     run: |
       LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}.txt"
-      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} \
+      stuart_build -c ${{ inputs.platform-config }} --FLASHONLY ${{ steps.stuart.outputs.arguments }} \
       $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
       echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
+
   
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
