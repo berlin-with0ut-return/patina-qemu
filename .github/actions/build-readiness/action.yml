@@ -60,7 +60,7 @@ runs:
     id: build-and-run
     shell: bash
     run: |
-      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} SHUTDOWN_AFTER_RUN=TRUE RUN_READINESS=TRUE EMPTY_DRIVE=TRUE > "$LOGFILE" 2>&1
+      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} SHUTDOWN_AFTER_RUN=TRUE RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
 
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
