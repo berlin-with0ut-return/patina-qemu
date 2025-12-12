@@ -60,9 +60,7 @@ runs:
     id: build-and-run
     shell: bash
     run: |
-      LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}.txt"
       stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} SHUTDOWN_AFTER_RUN=TRUE RUN_READINESS=TRUE EMPTY_DRIVE=TRUE > "$LOGFILE" 2>&1
-      echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
 
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
@@ -85,7 +83,7 @@ runs:
   - name: Extract JSON block from logfile
     shell: bash
     run: |
-      logfile="${{ steps.build-and-run.outputs.logfile }}"
+      logfile="Build/QemuQ35PkgX64/DEBUG_VS2022/readiness_results/capture.json"
       json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
       # Extract content from first { to last } using sed
