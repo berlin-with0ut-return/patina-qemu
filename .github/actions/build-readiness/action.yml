@@ -8,29 +8,13 @@
 name: Build QEMU Readiness Tool
 description: Test QEMU platform requirements
 
-inputs:
+inputs: 
   platform-config:
     description: 'Path to the Stuart platform configuration file (.py)'
     required: true
-  platform-name:
-    description: 'Name of the platform being built (for logging purposes)'
-    required: true
-  target:
-    description: 'Build target (e.g., DEBUG, RELEASE)'
-    required: false
-    default: 'DEBUG'
-  tool-chain:
-    description: 'Tool chain to use (e.g., VS2022, GCC)'
-    required: false
-    default: 'VS2022'
   readiness:
-    description: 'Version of readiness tool (X64 or ARM64) to run.'
-    required: false
-    default: ''
-  stuart-args:
-    description: 'Additional build arguments to pass to stuart_build'
-    required: false
-    default: ''
+    description: 'Which version of readiness tool to use (X64 or ARM64)'
+    required: true
 
 runs:
   using: composite
@@ -43,14 +27,6 @@ runs:
     run: |
       mkdir -p "$RUNNER_TEMP"/build-logs
       echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
-
-  # Cannot use ENV in a composite action, so lets create our reusable argument string here
-  - name: Setup Total Stuart arguments
-    id: stuart
-    shell: bash
-    run: |
-      ARGS="TARGET=${{ inputs.target }} TOOL_CHAIN_TAG=${{ inputs.tool-chain }} ${{ inputs.stuart-args }}"
-      echo "arguments=$ARGS" >> $GITHUB_OUTPUT
 
   # Create a cache key based on the submodule hashes to speed up repeated builds
   - name: Gather submodule hashes
@@ -65,39 +41,29 @@ runs:
     uses: actions/cache@v4
     with:
       path: .git/modules
-      key: ${{ runner.os }}-${{ inputs.platform-name }}-submodules-${{ steps.submodules-hash.outputs.hash}}
+      key: ${{ runner.os }}-submodules-${{ steps.submodules-hash.outputs.hash}}
 
   # Stuart setup should be slightly faster if we were able to restore the cache to .git/modules
   - name: Download required submodules (stuart_setup)
     shell: bash
     run: |
-      stuart_setup -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
+      stuart_setup -c ${{ inputs.platform-config }}
   
   # Download external dependencies
   - name: Download external dependencies (stuart_update)
     shell: bash
     run: |
-      stuart_update -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
-    
-  # Build the platform
-  - name: Build platform (stuart_build)
-    id: build
-    shell: bash
-    run: |
-      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
-      $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") 
+      stuart_update -c ${{ inputs.platform-config }}
 
-  # Capture output
-  - name: Build platform (stuart_build)
+  # Capture output. The path to the readiness tool should already be set by the enviornment. 
+  - name: Build and capture output (stuart_build)
     id: build-and-run
     shell: bash
     run: |
       LOGFILE="${{ steps.tempdir.outputs.path }}/stuart_output${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}.txt"
-      stuart_build -c ${{ inputs.platform-config }} --FLASHONLY ${{ steps.stuart.outputs.arguments }} \
-      $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}") > "$LOGFILE" 2>&1
+      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} SHUTDOWN_AFTER_RUN=TRUE RUN_READINESS=TRUE EMPTY_DRIVE=TRUE > "$LOGFILE" 2>&1
       echo "logfile=$LOGFILE" >> $GITHUB_OUTPUT
 
-  
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
     if: ${{ always() && steps.tempdir.outputs.path }}
@@ -115,6 +81,7 @@ runs:
         echo "No matching log files found"
       fi
 
+  # Extract json from build output
   - name: Extract JSON block from logfile
     shell: bash
     run: |
@@ -173,5 +140,5 @@ runs:
     uses: actions/upload-artifact@v4
     with:
       # Specify architecture if it is not empty
-      name: readiness-logs-${{ inputs.platform-name }}-${{ inputs.target }}-${{ inputs.tool-chain }}${{ inputs.architecture && format('-{0}', inputs.architecture) || '' }}
+      name: readiness-logs-${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}
       path: ${{ steps.tempdir.outputs.path }}

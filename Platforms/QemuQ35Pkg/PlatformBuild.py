@@ -433,6 +433,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         drive_path = self.env.GetValue("VIRTUAL_DRIVE_PATH")
         drive_size = int(self.env.GetValue("VIRTUAL_DRIVE_SIZE", 60))
         run_paging_audit = False
+        run_readiness = (self.env.GetValue("RUN_READINESS", "FALSE").upper() == "TRUE")
 
         # General debugging information for users
         if run_tests:
@@ -440,7 +441,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
                 logging.warning("Running tests, but no Tests specified. use TEST_REGEX to specify tests to run.")
 
             if not empty_drive:
-                logging.info("EMPTY_DRIVE=FALSE. Old files can persist, could effect test results.")
+                logging.info("EMPTY_DRIVE=FALSE. Old files can persist, could effect test results.") #  SHERRYneed empty drive for ci testing
 
             if not shutdown_after_run:
                 logging.info("SHUTDOWN_AFTER_RUN=FALSE. You will need to close qemu manually to gather test results.")
@@ -465,7 +466,11 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
                 run_paging_audit = True
 
             self.Helper.add_tests(virtual_drive, test_list, auto_run = run_tests, auto_shutdown = shutdown_after_run, paging_audit = run_paging_audit)
-        # Otherwise add an empty startup script
+        
+        if run_readiness:
+            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") # this should not run all the time
+            self.Helper.run_and_copy_readiness(virtual_drive, readiness_path, Path(drive_path).parent / "readiness_results")
+
         if shutdown_after_run:
             virtual_drive.add_startup_script([], auto_shutdown=shutdown_after_run)
 

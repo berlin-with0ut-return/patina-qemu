@@ -91,6 +91,7 @@ class VirtualDrive:
         """
         nsh = StartupScript()
         for line in lines:
+            logging.info(line)
             nsh.add_line(str(line))
 
         nsh_path = self.drive_path.parent / "startup.nsh"
@@ -351,6 +352,7 @@ class VirtualDriveManager(IUefiHelperPlugin):
         obj.Register("add_tests", VirtualDriveManager.add_tests, fp)
         obj.Register("report_results", VirtualDriveManager.report_results, fp)
         obj.Register("generate_paging_audit", VirtualDriveManager.generate_paging_audit, fp)
+        obj.Register("run_and_copy_readiness", VirtualDriveManager.run_and_copy_readiness, fp)
         return 0
 
     @staticmethod
@@ -358,6 +360,15 @@ class VirtualDriveManager(IUefiHelperPlugin):
         if os.name == 'nt':
             return WindowsVirtualDrive(path)
         return LinuxVirtualDrive(path)
+
+    @staticmethod
+    def run_and_copy_readiness(drive: VirtualDrive, readiness_path: str, local_path: PathLike):
+        drive.add_files([readiness_path])
+        logging.info("setting up readiness")
+        drive.add_startup_script(["fs0:", "uefishell_dxe_readiness_capture.efi > capture.json"], auto_shutdown = True) # then copy file to a local place... then proceed with validation
+        logging.info("local path " + str(local_path))
+        local_path.mkdir(exist_ok=True)
+        drive.get_file("capture.json", local_path / "capture.json")
 
     @staticmethod
     def add_tests(drive: VirtualDrive, test_list: list[str], auto_run = True, auto_shutdown = True, paging_audit = False):
