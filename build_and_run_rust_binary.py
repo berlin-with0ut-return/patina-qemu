@@ -140,6 +140,13 @@ def _parse_arguments() -> argparse.Namespace:
         default=None,
         help="Feature set for patina-dxe-core-qemu build"
     )
+    parser.add_argument(
+        "--monitor-port",
+        "-m",
+        type=int,
+        default=None,
+        help="Port to use for QEMU monitor communication.",
+    )
 
     args = parser.parse_args()
     if args.platform == "SBSA" and args.toolchain == "VS2022":
@@ -311,8 +318,12 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
             "-serial",
             f"tcp:127.0.0.1:{args.serial_port},server,nowait",
         ]
+
         if args.gdb_port:
             qemu_cmd += ["-gdb", f"tcp::{args.gdb_port}"]
+
+        if args.monitor_port:
+            qemu_cmd += ["-monitor", f"telnet:127.0.0.1:{args.monitor_port},server,nowait"]
 
         if args.os:
             qemu_cmd += args.os
@@ -430,6 +441,9 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
 
         if args.gdb_port:
             qemu_cmd += ["-gdb", f"tcp::{args.gdb_port}"]
+
+        if args.monitor_port:
+            qemu_cmd += ["-monitor", f"telnet:127.0.0.1:{args.monitor_port},server,nowait"]
 
         if args.os:
             qemu_cmd += args.os
