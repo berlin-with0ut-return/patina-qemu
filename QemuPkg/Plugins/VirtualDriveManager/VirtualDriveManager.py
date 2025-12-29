@@ -366,10 +366,10 @@ class VirtualDriveManager(IUefiHelperPlugin):
     def run_and_copy_readiness(drive: VirtualDrive, readiness_path: str, local_path: PathLike):
         drive.add_files([readiness_path])
         logging.info("setting up readiness")
-        drive.add_startup_script(["fs0:", "uefishell_dxe_readiness_capture.efi > capture.json"], auto_shutdown = True) # then copy file to a local place... then proceed with validation
+        drive.add_startup_script(["fs0:", "uefishell_dxe_readiness_capture.efi > capture.json"], auto_shutdown = True)
         logging.info("local path " + str(local_path))
         local_path.mkdir(exist_ok=True)
-        drive.get_file("capture.json", local_path / "capture.json")
+        # Note: capture.json is copied out AFTER QEMU runs, not here
 
     @staticmethod
     def add_tests(drive: VirtualDrive, test_list: list[str], auto_run = True, auto_shutdown = True, paging_audit = False):

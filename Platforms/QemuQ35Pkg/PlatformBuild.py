@@ -468,7 +468,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
             self.Helper.add_tests(virtual_drive, test_list, auto_run = run_tests, auto_shutdown = shutdown_after_run, paging_audit = run_paging_audit)
         
         if run_readiness:
-            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") + "/capture/x64_64/uefishell_dxe_readiness_capture.efi" # this should not run all the time
+            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") + "/capture/x64_64/uefishell_dxe_readiness_capture.efi"
             self.Helper.run_and_copy_readiness(virtual_drive, readiness_path, Path(drive_path).parent / "readiness_results")
 
         if shutdown_after_run:
@@ -494,6 +494,16 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         if ret != 0:
             logging.critical("Failed running Qemu")
             return ret
+
+        # Copy readiness results after QEMU run
+        if run_readiness:
+            readiness_results_path = Path(drive_path).parent / "readiness_results"
+            try:
+                virtual_drive.get_file("capture.json", readiness_results_path / "capture.json")
+                logging.info(f"Readiness results copied to {readiness_results_path}")
+            except Exception as ex:
+                logging.error(f"Failed to copy readiness results: {ex}")
+                return -1
 
         if self.env.GetValue("CPU_MODEL") is not None:
             self.__ValidateCpuModelInfo()

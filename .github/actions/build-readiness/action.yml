@@ -28,6 +28,14 @@ runs:
       mkdir -p "$RUNNER_TEMP"/build-logs
       echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
 
+  # Cannot use ENV in a composite action, so lets create our reusable argument string here
+  - name: Setup Total Stuart arguments
+    id: stuart
+    shell: bash
+    run: |
+      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=VS2022"
+      echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
   # Create a cache key based on the submodule hashes to speed up repeated builds
   - name: Gather submodule hashes
     id: submodules-hash
@@ -47,22 +55,22 @@ runs:
   - name: Download required submodules (stuart_setup)
     shell: bash
     run: |
-      stuart_setup -c ${{ inputs.platform-config }}
+      stuart_setup -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
   
   # Download external dependencies
   - name: Download external dependencies (stuart_update)
     shell: bash
     run: |
-      stuart_update -c ${{ inputs.platform-config }}
+      stuart_update -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
 
-  # Capture output. The path to the readiness tool should already be set by the enviornment. 
+  # Build platform normally without readiness flags
   - name: Build platform (stuart_build)
     id: build-platform
     shell: bash
     run: |
-      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
 
-  # Capture output. The path to the readiness tool should already be set by the enviornment. 
+  # Run with readiness flags to capture output
   - name: Run and capture output (stuart_build)
     id: run-output
     shell: bash
