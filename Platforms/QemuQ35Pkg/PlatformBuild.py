@@ -468,7 +468,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
             self.Helper.add_tests(virtual_drive, test_list, auto_run = run_tests, auto_shutdown = shutdown_after_run, paging_audit = run_paging_audit)
         
         if run_readiness:
-            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") # this should not run all the time
+            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") + "/capture/x64_64/uefishell_dxe_readiness_capture.efi" # this should not run all the time
             self.Helper.run_and_copy_readiness(virtual_drive, readiness_path, Path(drive_path).parent / "readiness_results")
 
         if shutdown_after_run:

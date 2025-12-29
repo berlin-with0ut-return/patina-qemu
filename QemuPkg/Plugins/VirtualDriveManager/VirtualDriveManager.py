@@ -199,6 +199,7 @@ class LinuxVirtualDrive(VirtualDrive):
             logger.error(f"Failed to insert {filepath} into drive.")
             logger.error(e)
             raise RuntimeError(e)
+        logging.info(f"Inserted {filepath} into drive.")
 
     def get_file(self, virtual_path: PathLike, local_path: PathLike):
         """Gets a file from the virtual drive.

@@ -56,11 +56,18 @@ runs:
       stuart_update -c ${{ inputs.platform-config }}
 
   # Capture output. The path to the readiness tool should already be set by the enviornment. 
-  - name: Build and capture output (stuart_build)
-    id: build-and-run
+  - name: Build platform (stuart_build)
+    id: build-platform
     shell: bash
     run: |
-      stuart_build -c ${{ inputs.platform-config }} --FLASHROM ${{ steps.stuart.outputs.arguments }} RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
+
+  # Capture output. The path to the readiness tool should already be set by the enviornment. 
+  - name: Run and capture output (stuart_build)
+    id: run-output
+    shell: bash
+    run: |
+      stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
 
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
