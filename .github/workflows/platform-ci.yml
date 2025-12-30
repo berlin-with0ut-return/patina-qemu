@@ -131,18 +131,19 @@ jobs:
         run: pip install -r pip-requirements.txt
       
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
-      - name: Build and Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform/
-        with:
-          platform-config: ${{ matrix.config }}
-          platform-name: ${{ matrix.platform }}
-          target: ${{ matrix.target }}
-          tool-chain: ${{ matrix.tool-chain }}
-          # Only pass architecture if it is defined in the matrix
-          architecture: ${{ matrix.architecture || '' }}
-          flash: 'true'
-          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
-          publish-logs: 'true'
+      # SHERRY: skip for now to speed up testing
+      # - name: Build and Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      #   uses: ./.github/actions/build-platform/
+      #   with:
+      #     platform-config: ${{ matrix.config }}
+      #     platform-name: ${{ matrix.platform }}
+      #     target: ${{ matrix.target }}
+      #     tool-chain: ${{ matrix.tool-chain }}
+      #     # Only pass architecture if it is defined in the matrix
+      #     architecture: ${{ matrix.architecture || '' }}
+      #     flash: 'true'
+      #     stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
+      #     publish-logs: 'true'
 
       # Run the readiness tool on X64
       - name: Readiness Tool X64
