@@ -117,18 +117,15 @@ runs:
   - name: Run readiness validator
     shell: bash
     run: |
-      logfile="${{ steps.build-and-run.outputs.logfile }}"
       arch="${{ inputs.readiness }}"
       json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
       
-      if [ -n "$logfile" ]; then
-        if [ "$arch" = "ARM64" ]; then
-          chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe
-          ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe -f "$json_file"
-        elif [ "$arch" = "X64" ]; then
-          chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe
-          ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe -f "$json_file"
-        fi
+      if [ "$arch" = "ARM64" ]; then
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe -f "$json_file"
+      elif [ "$arch" = "X64" ]; then
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe -f "$json_file"
       fi
 
   # Optional: Move the run logs to the temporary directory if it was created
@@ -154,5 +151,5 @@ runs:
     uses: actions/upload-artifact@v4
     with:
       # Specify architecture if it is not empty
-      name: readiness-logs-${{ inputs.readiness && format('-{0}', inputs.readiness) || '' }}
+      name: readiness-logs-${{ inputs.readiness && format('{0}-', inputs.readiness) || '' }}${{ github.run_id }}
       path: ${{ steps.tempdir.outputs.path }}
