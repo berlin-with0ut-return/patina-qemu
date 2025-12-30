@@ -15,6 +15,10 @@ inputs:
   readiness:
     description: 'Which version of readiness tool to use (X64 or ARM64)'
     required: true
+  tool-chain:
+    description: 'Tool chain to use (e.g., VS2022, GCC)'
+    required: false
+    default: 'VS2022'
 
 runs:
   using: composite
@@ -33,7 +37,7 @@ runs:
     id: stuart
     shell: bash
     run: |
-      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=VS2022"
+      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=${{ inputs.tool-chain }} "
       echo "arguments=$ARGS" >> $GITHUB_OUTPUT
 
   # Create a cache key based on the submodule hashes to speed up repeated builds
@@ -151,5 +155,5 @@ runs:
     uses: actions/upload-artifact@v4
     with:
       # Specify architecture if it is not empty
-      name: readiness-logs-${{ inputs.readiness && format('{0}-', inputs.readiness) || '' }}${{ github.run_id }}
+      name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.readiness && format('{0}-', inputs.readiness) || '' }}${{ github.run_id }}
       path: ${{ steps.tempdir.outputs.path }}

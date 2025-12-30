@@ -47,6 +47,7 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'X64'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
@@ -96,6 +97,7 @@ jobs:
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'ARM64'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -145,19 +147,14 @@ jobs:
       #     stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
       #     publish-logs: 'true'
 
-      # Run the readiness tool on X64
-      - name: Readiness Tool X64
+      # Run the readiness tool
+      - name: Readiness Tool
+        if: ${{ matrix.readiness != null }}
         uses: ./.github/actions/build-readiness/
         with:
-          platform-config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
-          readiness: 'X64'
-
-      # Run the readiness tool on ARM64
-      - name: Readiness Tool ARM64
-        uses: ./.github/actions/build-readiness/
-        with:
-          platform-config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
-          readiness: 'ARM64'
+          platform-config: ${{ matrix.config }}
+          readiness: ${{ matrix.readiness }}
+          tool-chain: ${{ matrix.tool-chain }}
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.
