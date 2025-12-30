@@ -138,7 +138,7 @@ runs:
       TEMP_DIR: ${{ steps.tempdir.outputs.path }}
     run: |
       shopt -s globstar nullglob
-      files=(**/*Run.txt)
+      files=(**/*Run.txt **/capture.json)
 
       if ((${#files[@]})); then
         echo "Moving ${#files[@]} log files"
