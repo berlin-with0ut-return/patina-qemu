@@ -37,7 +37,7 @@ runs:
     id: stuart
     shell: bash
     run: |
-      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=${{ inputs.tool-chain }} "
+      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=${{ inputs.tool-chain }} QEMU_HEADLESS=TRUE"
       echo "arguments=$ARGS" >> $GITHUB_OUTPUT
 
   # Create a cache key based on the submodule hashes to speed up repeated builds

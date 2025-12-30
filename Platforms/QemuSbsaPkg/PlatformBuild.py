@@ -582,6 +582,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         test_regex = self.env.GetValue("TEST_REGEX", "")
         drive_path = self.env.GetValue("VIRTUAL_DRIVE_PATH")
         run_paging_audit = False
+        run_readiness = (self.env.GetValue("RUN_READINESS", "FALSE").upper() == "TRUE")
 
         # General debugging information for users
         if run_tests:
@@ -618,6 +619,10 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         else:
             virtual_drive.add_startup_script([], auto_shutdown=shutdown_after_run)
 
+        if run_readiness:
+            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") + "/capture/x64_64/uefishell_dxe_readiness_capture.efi"
+            self.Helper.run_and_copy_readiness(virtual_drive, readiness_path, Path(drive_path).parent / "readiness_results")
+
         # Get the version number (repo release)
         outstream = StringIO()
         version = "Unknown"
@@ -638,6 +643,15 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         if ret != 0:
             logging.critical("Failed running Qemu")
             return ret
+        
+        if run_readiness:
+            readiness_results_path = Path(drive_path).parent / "readiness_results"
+            try:
+                virtual_drive.get_file("capture.json", readiness_results_path / "capture.json")
+                logging.info(f"Readiness results copied to {readiness_results_path}")
+            except Exception as ex:
+                logging.error(f"Failed to copy readiness results: {ex}")
+                return -1
 
         if not run_tests:
             return 0
