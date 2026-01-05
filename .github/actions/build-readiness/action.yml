@@ -75,7 +75,7 @@ runs:
       if [ "${{ inputs.readiness }}" = "ARM64" ]; then
         override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi"
       elif [ "${{ inputs.readiness }}" = "X64" ]; then
-        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86-64/qemu_dxe_readiness_capture.efi"
+        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi"
       fi
       stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} BLD_*_DXE_CORE_BINARY_OVERRIDE="$override_value"
 
