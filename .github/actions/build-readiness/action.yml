@@ -100,8 +100,7 @@ runs:
       json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
       # Skip log lines and extract JSON content (from first { to last })
-      # sed only works on utf8, convert first for safety
-      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - INFO - {$/{/; s/^INFO - //p}' capture.utf8.txt > "$json_output"
+      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - INFO - {$/{/; s/^INFO - //p}' "$logfile" > "$json_output"
       
       # Verify JSON was extracted
       if [ -s "$json_output" ] && grep -q '{' "$json_output" && grep -q '}' "$json_output"; then
