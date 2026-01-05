@@ -101,7 +101,6 @@ runs:
 
       # Skip log lines and extract JSON content (from first { to last })
       # sed only works on utf8, convert first for safety
-      iconv -f utf-16 -t utf-8 "$logfile" > capture.utf8.txt
       sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - INFO - {$/{/; s/^INFO - //p}' capture.utf8.txt > "$json_output"
       
       # Verify JSON was extracted
