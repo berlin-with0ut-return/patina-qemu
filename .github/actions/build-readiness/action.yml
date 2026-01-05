@@ -84,7 +84,8 @@ runs:
     id: run-output
     shell: bash
     run: |      
-      stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE
+      # dead loop runs forever, so timeout after logs are ready
+      timeout 120s stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
 
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
