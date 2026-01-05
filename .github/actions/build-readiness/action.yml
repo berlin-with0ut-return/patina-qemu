@@ -87,23 +87,6 @@ runs:
       # dead loop runs forever, so timeout after logs are ready
       timeout 120s stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
 
-  # Optional: Move the build logs to the temporary directory if it was created
-  - name: Move build log
-    if: ${{ always() && steps.tempdir.outputs.path }}
-    shell: bash
-    env:
-      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
-    run: |
-      shopt -s globstar nullglob
-      files=(**/BUILDLOG* **/BUILD_REPORT.TXT **/OVERRIDELOG.TXT)
-
-      if ((${#files[@]})); then
-        echo "Moving ${#files[@]} log files"
-        mv "${files[@]}" "$TEMP_DIR"
-      else
-        echo "No matching log files found"
-      fi
-
   # Extract json from build output
   - name: Extract JSON block from logfile
     shell: bash
@@ -128,6 +111,24 @@ runs:
         echo "Error: No JSON block found in logfile" >&2
         exit 1
       fi
+
+  # Optional: Move the build logs to the temporary directory if it was created
+  - name: Move build log
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    shell: bash
+    env:
+      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
+    run: |
+      shopt -s globstar nullglob
+      files=(**/BUILDLOG* **/BUILD_REPORT.TXT **/OVERRIDELOG.TXT)
+
+      if ((${#files[@]})); then
+        echo "Moving ${#files[@]} log files"
+        mv "${files[@]}" "$TEMP_DIR"
+      else
+        echo "No matching log files found"
+      fi
+
 
   # Optional: Run readiness tool
   - name: Run readiness validator
