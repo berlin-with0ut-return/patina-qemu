@@ -2,9 +2,9 @@
     "scope": "qemu",
     "type": "web",
     "name": "READINESS.QEMU",
-    "source": "https://github.com/berlin-with0ut-return/patina-readiness-tool/releases/download/v0.1.4/patina_readiness_tool.zip",
-    "version": "0.1.4",
-    "sha256": "67a86cd6e092e87a806bac0c83b8c66eb5b44e762ea7da4c16e8250a63ed1b66",
+    "source": "https://github.com/OpenDevicePartnership/patina-readiness-tool/releases/download/0.1.1/patina_readiness_tool.zip",
+    "version": "0.1.1",
+    "sha256": "3fe583de7f3f959b664e81dfe41a0f807e317367fb87b73fc522488c23ebb263",
     "internal_path": "/",
     "compression_type": "zip",
     "flags": [

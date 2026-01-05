@@ -72,14 +72,19 @@ runs:
     id: build-platform
     shell: bash
     run: |
-      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
+      if [ "${{ inputs.readiness }}" = "ARM64" ]; then
+        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi"
+      elif [ "${{ inputs.readiness }}" = "X64" ]; then
+        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86-64/qemu_dxe_readiness_capture.efi"
+      fi
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} BLD_*_DXE_CORE_BINARY_OVERRIDE="$override_value"
 
   # Run with readiness flags to capture output
   - name: Run and capture output (stuart_build)
     id: run-output
     shell: bash
-    run: |
-      stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} RUN_READINESS=TRUE EMPTY_DRIVE=TRUE
+    run: |      
+      stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE
 
   # Optional: Move the build logs to the temporary directory if it was created
   - name: Move build log
@@ -102,12 +107,18 @@ runs:
   - name: Extract JSON block from logfile
     shell: bash
     run: |
-      logfile="Build/QemuQ35PkgX64/DEBUG_VS2022/readiness_results/capture.json"
+      if [ "${{ inputs.readiness }}" = "ARM64" ]; then
+        logfile="Build/BUILDLOG_QemuSbsaPkg_Run.txt"
+      elif [ "${{ inputs.readiness }}" = "X64" ]; then
+        logfile="Build/BUILDLOG_QemuQ35Pkg_Run.txt"
+      fi
+
       json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
       # Skip log lines and extract JSON content (from first { to last })
-      iconv -f utf-16 -t utf-8 "$logfile" > capture.utf8.json
-      sed -n '/^{/,/^}/p' capture.utf8.json > "$json_output"
+      # sed only works on utf8, convert first for safety
+      iconv -f utf-16 -t utf-8 "$logfile" > capture.utf8.txt
+      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - INFO - {$/{/; s/^INFO - //p}' capture.utf8.txt > "$json_output"
       
       # Verify JSON was extracted
       if [ -s "$json_output" ] && grep -q '{' "$json_output" && grep -q '}' "$json_output"; then
