@@ -12,8 +12,8 @@ inputs:
   platform-config:
     description: 'Path to the Stuart platform configuration file (.py)'
     required: true
-  readiness:
-    description: 'Which version of readiness tool to use (X64 or ARM64)'
+  platform:
+    description: 'Name of the platform being built (for logging purposes)'
     required: true
   tool-chain:
     description: 'Tool chain to use (e.g., VS2022, GCC)'
@@ -72,9 +72,9 @@ runs:
     id: build-platform
     shell: bash
     run: |
-      if [ "${{ inputs.readiness }}" = "ARM64" ]; then
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
         override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi"
-      elif [ "${{ inputs.readiness }}" = "X64" ]; then
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
         override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x64_64/qemu_dxe_readiness_capture.efi"
       fi
       stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} BLD_*_DXE_CORE_BINARY_OVERRIDE="$override_value"
@@ -91,16 +91,16 @@ runs:
   - name: Extract JSON block from logfile
     shell: bash
     run: |
-      if [ "${{ inputs.readiness }}" = "ARM64" ]; then
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
         logfile="Build/BUILDLOG_QemuSbsaPkg_Run.txt"
-      elif [ "${{ inputs.readiness }}" = "X64" ]; then
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
         logfile="Build/BUILDLOG_QemuQ35Pkg_Run.txt"
       fi
 
       json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
 
       # Skip log lines and extract JSON content (from first { to last })
-      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - INFO - {$/{/; s/^INFO - //p}' "$logfile" > "$json_output"
+      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$json_output"
       
       # Verify JSON was extracted
       if [ -s "$json_output" ] && grep -q '{' "$json_output" && grep -q '}' "$json_output"; then
@@ -132,15 +132,14 @@ runs:
   - name: Run readiness validator
     shell: bash
     run: |
-      arch="${{ inputs.readiness }}"
       json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
       
-      if [ "$arch" = "ARM64" ]; then
-        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe
-        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_aarch64.exe -f "$json_file"
-      elif [ "$arch" = "X64" ]; then
-        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe
-        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/dxe_readiness_validator_x86-64.exe -f "$json_file"
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64.exe
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64.exe -f "$json_file"
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe -f "$json_file"
       fi
 
   # Optional: Move the run logs to the temporary directory if it was created
@@ -166,5 +165,5 @@ runs:
     uses: actions/upload-artifact@v4
     with:
       # Specify architecture if it is not empty
-      name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.readiness && format('{0}-', inputs.readiness) || '' }}${{ github.run_id }}
+      name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.platform && format('{0}-', inputs.platform) || '' }}${{ github.run_id }}
       path: ${{ steps.tempdir.outputs.path }}

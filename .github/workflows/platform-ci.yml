@@ -47,7 +47,7 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
-            readiness: 'X64'
+            readiness: true
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
@@ -97,7 +97,7 @@ jobs:
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
-            readiness: 'ARM64'
+            readiness: true
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -153,7 +153,7 @@ jobs:
         uses: ./.github/actions/build-readiness/
         with:
           platform-config: ${{ matrix.config }}
-          readiness: ${{ matrix.readiness }}
+          platform: ${{ matrix.platform }}
           tool-chain: ${{ matrix.tool-chain }}
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
