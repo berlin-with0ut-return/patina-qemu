@@ -91,7 +91,6 @@ class VirtualDrive:
         """
         nsh = StartupScript()
         for line in lines:
-            logging.info(line)
             nsh.add_line(str(line))
 
         nsh_path = self.drive_path.parent / "startup.nsh"
@@ -199,7 +198,6 @@ class LinuxVirtualDrive(VirtualDrive):
             logger.error(f"Failed to insert {filepath} into drive.")
             logger.error(e)
             raise RuntimeError(e)
-        logging.info(f"Inserted {filepath} into drive.")
 
     def get_file(self, virtual_path: PathLike, local_path: PathLike):
         """Gets a file from the virtual drive.
@@ -353,7 +351,6 @@ class VirtualDriveManager(IUefiHelperPlugin):
         obj.Register("add_tests", VirtualDriveManager.add_tests, fp)
         obj.Register("report_results", VirtualDriveManager.report_results, fp)
         obj.Register("generate_paging_audit", VirtualDriveManager.generate_paging_audit, fp)
-        obj.Register("run_and_copy_readiness", VirtualDriveManager.run_and_copy_readiness, fp)
         return 0
 
     @staticmethod
@@ -361,15 +358,6 @@ class VirtualDriveManager(IUefiHelperPlugin):
         if os.name == 'nt':
             return WindowsVirtualDrive(path)
         return LinuxVirtualDrive(path)
-
-    @staticmethod
-    def run_and_copy_readiness(drive: VirtualDrive, readiness_path: str, local_path: PathLike):
-        drive.add_files([readiness_path])
-        logging.info("setting up readiness")
-        drive.add_startup_script(["fs0:", "uefishell_dxe_readiness_capture.efi > capture.json"], auto_shutdown = True)
-        logging.info("local path " + str(local_path))
-        local_path.mkdir(exist_ok=True)
-        # Note: capture.json is copied out AFTER QEMU runs, not here
 
     @staticmethod
     def add_tests(drive: VirtualDrive, test_list: list[str], auto_run = True, auto_shutdown = True, paging_audit = False):

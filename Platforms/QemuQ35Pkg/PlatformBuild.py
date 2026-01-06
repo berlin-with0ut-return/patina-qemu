@@ -433,7 +433,6 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         drive_path = self.env.GetValue("VIRTUAL_DRIVE_PATH")
         drive_size = int(self.env.GetValue("VIRTUAL_DRIVE_SIZE", 60))
         run_paging_audit = False
-        run_readiness = (self.env.GetValue("RUN_READINESS", "FALSE").upper() == "TRUE")
 
         # General debugging information for users
         if run_tests:
@@ -441,7 +440,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
                 logging.warning("Running tests, but no Tests specified. use TEST_REGEX to specify tests to run.")
 
             if not empty_drive:
-                logging.info("EMPTY_DRIVE=FALSE. Old files can persist, could effect test results.") #  SHERRYneed empty drive for ci testing
+                logging.info("EMPTY_DRIVE=FALSE. Old files can persist, could effect test results.")
 
             if not shutdown_after_run:
                 logging.info("SHUTDOWN_AFTER_RUN=FALSE. You will need to close qemu manually to gather test results.")
@@ -466,11 +465,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
                 run_paging_audit = True
 
             self.Helper.add_tests(virtual_drive, test_list, auto_run = run_tests, auto_shutdown = shutdown_after_run, paging_audit = run_paging_audit)
-        
-        if run_readiness:
-            readiness_path = self.env.GetValue("DXE_READINESS_TOOL_PATH", "") + "/capture/x64_64/uefishell_dxe_readiness_capture.efi"
-            self.Helper.run_and_copy_readiness(virtual_drive, readiness_path, Path(drive_path).parent / "readiness_results")
-
+        # Otherwise add an empty startup script
         if shutdown_after_run:
             virtual_drive.add_startup_script([], auto_shutdown=shutdown_after_run)
 
@@ -494,16 +489,6 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         if ret != 0:
             logging.critical("Failed running Qemu")
             return ret
-
-        # Copy readiness results after QEMU run
-        if run_readiness:
-            readiness_results_path = Path(drive_path).parent / "readiness_results"
-            try:
-                virtual_drive.get_file("capture.json", readiness_results_path / "capture.json")
-                logging.info(f"Readiness results copied to {readiness_results_path}")
-            except Exception as ex:
-                logging.error(f"Failed to copy readiness results: {ex}")
-                return -1
 
         if self.env.GetValue("CPU_MODEL") is not None:
             self.__ValidateCpuModelInfo()
