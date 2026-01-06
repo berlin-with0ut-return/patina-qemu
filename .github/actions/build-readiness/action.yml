@@ -135,8 +135,8 @@ runs:
       json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
       
       if [ "${{ inputs.platform }}" = "SBSA" ]; then
-        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64.exe
-        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64.exe -f "$json_file"
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64 -f "$json_file"
       elif [ "${{ inputs.platform }}" = "Q35" ]; then
         chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe
         ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe -f "$json_file"
