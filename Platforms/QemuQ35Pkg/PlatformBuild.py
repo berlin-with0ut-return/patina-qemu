@@ -323,6 +323,13 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         )
         self.env.SetValue('CONF_PROFILE_NAMES', "P0,P1", "Platform Hardcoded")
 
+        tool_chain_override_on_cmdline = any(arg.startswith("TOOL_CHAIN_TAG=") for arg in sys.argv)
+        if not tool_chain_override_on_cmdline:
+            if os.name == 'nt':
+                self.env.SetValue("TOOL_CHAIN_TAG", "VS2022", f"Default VS2022 toolchain based on host OS ({os.name})")
+            else:
+                self.env.SetValue("TOOL_CHAIN_TAG", "GCC5", f"Default GCC5 toolchain based on host OS ({os.name})")
+
         # Globally set CodeQL failures to be ignored in this repo.
         # Note: This has no impact if CodeQL is not active/enabled.
         self.env.SetValue("STUART_CODEQL_AUDIT_ONLY", "true", "Platform Defined")
