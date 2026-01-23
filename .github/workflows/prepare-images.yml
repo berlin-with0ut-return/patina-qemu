@@ -5,7 +5,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
-name: "Boot Linux"
+name: "Prepare OS Boot Image"
 
 on:
   workflow_call:
@@ -25,8 +25,8 @@ env:
   SEED_ISO: seed.iso
 
 jobs:
-  build-linux-images:
-    name: Prepare Linux Boot Images
+  build-ubuntu-images:
+    name: Prepare Ubuntu Boot Image
 
     if: ${{ contains(inputs.artifact-name, 'ubuntu') }}
 
@@ -76,13 +76,67 @@ jobs:
             ${{ env.SEED_ISO }}
             
   build-windows-images:
-    name: Prepare Windows Boot Images
+    name: Prepare Windows Boot Image
 
     if: ${{ contains(inputs.artifact-name, 'windows') }}
 
-    runs-on: ubuntu-latest
+    # Need to run on the appropriate architecture so we generate a valid shutdown.exe
+    runs-on: ${{ contains(inputs.artifact-name, 'aarch64') && 'windows-11-arm' || 'windows-latest' }}
+
+    env:
+      ARCHITECTURE: ${{ contains(inputs.artifact-name, 'aarch64') && 'arm64' || 'x64' }}
 
     steps:
-      - name: Print Not Implemented Error
+      - name: Install Dependencies
         run: |
-          echo "Windows image preparation not yet implemented"
+          choco install -y qemu
+          Install-Module -Name PS2EXE -Scope CurrentUser -Force
+  
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.x # 6.0.0 is specifically required for the WVOS Image Builder CLI.
+
+      - name: Prepare Shutdown EXE
+        id: shutdown-exe
+        run: |
+          $script = 'Stop-Computer -Force'
+          $scriptPath = "shutdown.ps1"
+          $exePath = "shutdown.exe"
+          
+          Set-Content -Path $scriptPath -Value $script -Encoding ASCII
+
+          Invoke-PS2EXE $scriptPath $exePath -noConsole -icon "$null"
+          Write-Host "Shutdown EXE created at $env:GITHUB_WORKSPACE\$exePath"
+
+      - name: Download Windows Validation OS image
+        run: |
+          Invoke-WebRequest -Uri "${{ inputs.image-url }}" -OutFile "${{ env.IMG }}"
+      
+      - name: Mount Image and run OS Builder
+        run: |
+          $mountResult = Mount-DiskImage -ImagePath (Get-Item $env:IMG).FullName -PassThru
+          $driveLetter = ($mountResult | Get-Volume).DriveLetter
+          Write-Host "Mounted ISO at ${driveLetter}:\"
+
+          $cliPath = Join-Path "${driveLetter}:\" "ValidationOSImageBuilder\$env:ARCHITECTURE\ValidationOSImageBuilderCLI.exe"
+
+          $exePath = Join-Path "$env:GITHUB_WORKSPACE" "shutdown.exe"
+
+          # We need the powershell and provisioning packages to be able to run our shutdown executable.
+          & $cliPath -g -if vhdx -bt InternalDisk -sc "$exePath" -f powershell -f provisioning -o $env:GITHUB_WORKSPACE
+      
+      - name: Convert to qcow2
+        run: |
+          $vhdxPath = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter *.vhdx -Recurse -File | Select-Object -First 1
+          Write-Host "Converting VHDX at $($vhdxPath.FullName) to QCOW2"
+
+          & "C:\Program Files\qemu\qemu-img.exe" convert -O qcow2 $($vhdxPath.FullName) "$env:GITHUB_WORKSPACE\${{ env.DISK_IMAGE }}"
+          Write-Host "QCOW2 image created at $env:GITHUB_WORKSPACE\${{ env.DISK_IMAGE }}"
+      
+      - name: Publish Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            ${{ env.DISK_IMAGE }}

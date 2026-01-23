@@ -29,6 +29,10 @@ jobs:
             artifact-name: ${{ needs.vars.outputs.ubuntu-x64-artifact }}
           - img-url: ${{ needs.vars.outputs.ubuntu-aarch64-image }}
             artifact-name: ${{ needs.vars.outputs.ubuntu-aarch64-artifact }}
+          - img-url: ${{ needs.vars.outputs.windows-x64-image }}
+            artifact-name: ${{ needs.vars.outputs.windows-x64-artifact }}
+          - img-url: ${{ needs.vars.outputs.windows-aarch64-image }}
+            artifact-name: ${{ needs.vars.outputs.windows-aarch64-artifact }}
 
     uses: ./.github/workflows/prepare-images.yml
     with:
@@ -36,7 +40,7 @@ jobs:
       artifact-name: ${{ matrix.artifact-name }}
   
   boot-with-os:
-    name: Boot ${{ matrix.platform }} ${{ matrix.os-artifact }} ${{ matrix.target }} ${{ matrix.architecture || '' }}
+    name: Boot ${{ contains(matrix.os-artifact, 'windows') && 'Windows' || 'Ubuntu' }} ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.architecture || '' }}
     needs: 
       - prepare-os-images
       - vars
@@ -47,52 +51,92 @@ jobs:
       image: ${{ needs.vars.outputs.container-image }}
       options: --security-opt seccomp=unconfined
     
-    timeout-minutes: 20
+    timeout-minutes: 30
     
     env:
       OS_BOOT_ARTIFACTS_PATH: ./os-boot-artifacts
+      TOOL_CHAIN: ${{ needs.vars.outputs.linux-toolchain }}
 
     strategy:
+      fail-fast: false
       matrix:
         include:
-          # Q35 DEBUG X64 UBUNTU
+          # Q35 DEBUG X64 (Boot to Ubuntu)
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'Q35'
             os-artifact: ${{ needs.vars.outputs.ubuntu-x64-artifact }}
-          # Q35 RELEASE X64 UBUNTU
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # Q35 RELEASE X64 (Boot to Ubuntu)
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'Q35'
             os-artifact: ${{ needs.vars.outputs.ubuntu-x64-artifact }}
-          # Q35 DEBUG IA32,X64 UBUNTU
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # Q35 DEBUG IA32,X64 (Boot to Ubuntu)
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             architecture: 'IA32,X64'
             platform: 'Q35'
             os-artifact: ${{ needs.vars.outputs.ubuntu-x64-artifact }}
-          # Q35 RELEASE IA32,X64 UBUNTU
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # Q35 RELEASE IA32,X64 (Boot to Ubuntu)
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             architecture: 'IA32,X64'
             platform: 'Q35'
             os-artifact: ${{ needs.vars.outputs.ubuntu-x64-artifact }}
-          # SBSA DEBUG UBUNTU
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # SBSA DEBUG (Boot to Ubuntu)
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os-artifact: ${{ needs.vars.outputs.ubuntu-aarch64-artifact }}
-          # SBSA RELEASE UBUNTU
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # SBSA RELEASE (Boot to Ubuntu)
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
-            tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os-artifact: ${{ needs.vars.outputs.ubuntu-aarch64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2 PATH_TO_SEED=./os-boot-artifacts/seed.iso
+          # Q35 DEBUG X64 (Boot to Windows)
+          - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
+            target: 'DEBUG'
+            platform: 'Q35'
+            os-artifact: ${{ needs.vars.outputs.windows-x64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
+          # Q35 RELEASE X64 (Boot to Windows)
+          - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
+            target: 'RELEASE'
+            platform: 'Q35'
+            os-artifact: ${{ needs.vars.outputs.windows-x64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
+          # Q35 DEBUG IA32,X64 (Boot to Windows)
+          - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
+            target: 'DEBUG'
+            architecture: 'IA32,X64'
+            platform: 'Q35'
+            os-artifact: ${{ needs.vars.outputs.windows-x64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
+          # Q35 RELEASE IA32,X64 (Boot to Windows)
+          - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
+            target: 'RELEASE'
+            architecture: 'IA32,X64'
+            platform: 'Q35'
+            os-artifact: ${{ needs.vars.outputs.windows-x64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
+          # SBSA DEBUG (Boot to Windows)
+          - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
+            target: 'DEBUG'
+            platform: 'SBSA'
+            os-artifact: ${{ needs.vars.outputs.windows-aarch64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
+          # SBSA RELEASE (Boot to Windows)
+          - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
+            target: 'RELEASE'
+            platform: 'SBSA'
+            os-artifact: ${{ needs.vars.outputs.windows-aarch64-artifact }}
+            extra-args: PATH_TO_OS=./os-boot-artifacts/image.qcow2
 
     steps:
       # Checkout the repository to the runner or container
@@ -117,7 +161,7 @@ jobs:
           path: ${{ env.OS_BOOT_ARTIFACTS_PATH }}
       
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
-      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ env.TOOL_CHAIN }} ${{ matrix.architecture || '' }}
         id: build-platform  
         uses: ./.github/actions/build-platform
         with:
@@ -125,27 +169,27 @@ jobs:
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
-          tool-chain: ${{ matrix.tool-chain }}
+          tool-chain: ${{ env.TOOL_CHAIN }}
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
-          stuart-args: 'QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} PATH_TO_OS=${{ env.OS_BOOT_ARTIFACTS_PATH }}/image.qcow2 PATH_TO_SEED=${{ env.OS_BOOT_ARTIFACTS_PATH }}/seed.iso'
+          stuart-args: 'QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} ${{ matrix.extra-args }}'
       
-      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ env.TOOL_CHAIN }} ${{ matrix.architecture || '' }}
         uses: ./.github/actions/build-platform
         with:
           command: 'flash'
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
-          tool-chain: ${{ matrix.tool-chain }}
+          tool-chain: ${{ env.TOOL_CHAIN }}
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
-          stuart-args: 'QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} PATH_TO_OS=${{ env.OS_BOOT_ARTIFACTS_PATH }}/image.qcow2 PATH_TO_SEED=${{ env.OS_BOOT_ARTIFACTS_PATH }}/seed.iso'
+          stuart-args: 'QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} ${{ matrix.extra-args }}'
      
       - name: Publish Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           # Specify architecture if it is not empty
-          name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}${{ matrix.architecture && format('-{0}', matrix.architecture) || '' }}
+          name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ env.TOOL_CHAIN }}-${{ matrix.architecture && format('-{0}', matrix.architecture) || '' }}-${{ contains(matrix.os-artifact, 'windows') && 'windows' || 'ubuntu' }}
           path: ${{ steps.build-platform.outputs.log-path }}
