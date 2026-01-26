@@ -383,7 +383,7 @@ INF  MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
 INF  QemuQ35Pkg/SmbiosPlatformDxe/SmbiosPlatformDxe.inf
 
 # INF  MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-INF  PatinaPkg/AcpiSdtDxe/AcpiSdtDxe.inf
+INF  QemuPkg/AcpiSdtDxe/AcpiSdtDxe.inf
 INF  QemuQ35Pkg/AcpiPlatformDxe/AcpiPlatformDxe.inf
 INF  MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 
