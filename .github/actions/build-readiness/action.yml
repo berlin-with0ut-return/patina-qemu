@@ -97,14 +97,14 @@ runs:
         logfile="Build/BUILDLOG_QemuQ35Pkg_Run.txt"
       fi
 
-      json_output="${{ steps.tempdir.outputs.path }}/efi_output.json"
+      capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
 
       # Skip log lines and extract JSON content (from first { to last })
-      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$json_output"
+      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$capture_file"
       
       # Verify JSON was extracted
-      if [ -s "$json_output" ] && grep -q '{' "$json_output" && grep -q '}' "$json_output"; then
-        echo "Filtered JSON written to $json_output"
+      if [ -s "$capture_file" ] && grep -q '{' "$capture_file" && grep -q '}' "$capture_file"; then
+        echo "Filtered JSON written to $capture_file"
       else
         echo "Error: No JSON block found in logfile" >&2
         exit 1
@@ -132,14 +132,14 @@ runs:
   - name: Run readiness validator
     shell: bash
     run: |
-      json_file="${{ steps.tempdir.outputs.path }}/efi_output.json"
+      capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
+      validator_log="${{ steps.tempdir.outputs.path }}/validator_output.txt"
       
       if [ "${{ inputs.platform }}" = "SBSA" ]; then
         chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64
-        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64 -f "$json_file"
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86-64 -f "$capture_file" 2>&1 | tee "$validator_log"
       elif [ "${{ inputs.platform }}" = "Q35" ]; then
-        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe
-        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe -f "$json_file"
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86-64.exe -f "$capture_file" 2>&1 | tee "$validator_log"
       fi
 
   # Optional: Move the run logs to the temporary directory if it was created
@@ -150,7 +150,7 @@ runs:
       TEMP_DIR: ${{ steps.tempdir.outputs.path }}
     run: |
       shopt -s globstar nullglob
-      files=(**/*Run.txt **/capture.json)
+      files=(**/BUILDLOG_QemuQ35Pkg_Run.txt **/BUILDLOG_QemuSbsaPkg_Run.txt)
 
       if ((${#files[@]})); then
         echo "Moving ${#files[@]} log files"
