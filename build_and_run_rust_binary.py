@@ -20,6 +20,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
+from Platforms.Common.Qemu.QemuCommandBuilder import QemuCommandBuilder
+from Platforms.Common.Qemu.QemuCommandBuilder import QemuArchitecture
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
@@ -94,6 +97,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--build-target",
         "-b",
+        type=str.upper,
         choices=["DEBUG", "RELEASE"],
         default="DEBUG",
         help="Build target, either DEBUG or RELEASE.",
@@ -101,6 +105,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--platform",
         "-p",
+        type=str.upper,
         choices=["Q35", "SBSA"],
         default="Q35",
         help="QEMU platform such as Q35 or SBSA.",
@@ -108,7 +113,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--toolchain",
         "-t",
-        type=str,
+        type=str.upper,
         default="VS2022",
         help="Toolchain to use for building. "
         "Q35 default: VS2022. SBSA default: GCC5.",
@@ -138,49 +143,20 @@ def _parse_arguments() -> argparse.Namespace:
         "-f",
         type=str,
         default=None,
-        help="Feature set for patina-dxe-core-qemu build"
+        help="Feature set for patina-dxe-core-qemu build",
+    )
+    parser.add_argument(
+        "--monitor-port",
+        "-m",
+        type=int,
+        default=None,
+        help="Port to use for QEMU monitor communication.",
     )
 
     args = parser.parse_args()
     if args.platform == "SBSA" and args.toolchain == "VS2022":
         args.toolchain = "GCC5"
 
-    if args.os:
-        file_extension = args.os.suffix.lower().replace('"', "")
-
-        storage_format = {
-            ".vhd": "raw",
-            ".qcow2": "qcow2",
-            ".iso": "iso",
-        }.get(file_extension, None)
-
-        if storage_format is None:
-            raise Exception(f"Unknown OS file type: {args.os}")
-
-        os_arg = []
-
-        if storage_format == "iso":
-            os_arg = ["-cdrom", f" {args.os}"]
-        else:
-            if args.platform == "Q35":
-                # Q35 uses NVMe
-                os_arg = [
-                    "-drive",
-                    f"file={args.os},format={storage_format},if=none,id=os_nvme",
-                    "-device",
-                    "nvme,serial=nvme-1,drive=os_nvme",
-                ]
-            else:
-                # There is a bug in Windows for NVMe on AARCH64, so use AHCI instead
-                os_arg = [
-                    "-drive",
-                    f"file={args.os},format={storage_format},if=none,id=os_disk",
-                    "-device",
-                    "ahci,id=ahci",
-                    "-device",
-                    "ide-hd,drive=os_disk,bus=ahci.0",
-                ]
-        args.os = os_arg
     return args
 
 
@@ -271,54 +247,28 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
         else:
             qemu_exec = "/usr/local/bin/qemu-system-x86_64"
 
-        qemu_cmd = [
-            qemu_exec,
-            "-debugcon",
-            "stdio",
-            "-L",
-            SCRIPT_DIR / "QemuPkg" / "Binaries" / "qemu-win_extdep" / "share",
-            "-global",
-            "isa-debugcon.iobase=0x402",
-            "-global",
-            "ICH9-LPC.disable_s3=1",
-            "-machine",
-            "q35,smm=on",
-            "-cpu",
-            "qemu64,rdrand=on,umip=on,smep=on,pdpe1gb=on,popcnt=on,+sse,+sse2,+sse3,+ssse3,+sse4.2,+sse4.1,invtsc",
-            "-smp",
-            "4",
-            "-global",
-            "driver=cfi.pflash01,property=secure,value=on",
-            "-drive",
-            f"if=pflash,format=raw,unit=0,file={str(code_fd)},readonly=on",
-            "-drive",
-            "if=pflash,format=raw,unit=1,file="
-            + str(code_fd.parent / "QEMUQ35_VARS.fd"),
-            "-device",
-            "qemu-xhci,id=usb",
-            "-device",
-            "usb-tablet,id=input0,bus=usb.0,port=1",
-            "-net",
-            "none",
-            "-smbios",
-            f"type=0,vendor='Patina',version='patina-q35-patched',date={datetime.now().strftime('%m/%d/%Y')},uefi=on",
-            "-smbios",
-            "type=1,manufacturer=OpenDevicePartnership,product='QEMU Q35',family=QEMU,version='9.0.0',serial=42-42-42-42,uuid=99fb60e2-181c-413a-a3cf-0a5fea8d87b0",
-            "-smbios",
-            "type=3,manufacturer=OpenDevicePartnership,serial=40-41-42-43",
-            "-vga",
-            "cirrus",
-            "-serial",
-            f"tcp:127.0.0.1:{args.serial_port},server,nowait",
-        ]
-        if args.gdb_port:
-            qemu_cmd += ["-gdb", f"tcp::{args.gdb_port}"]
+        var_store = str(code_fd.parent / "QEMUQ35_VARS.fd")
+        rom_path = str(
+            SCRIPT_DIR / "QemuPkg" / "Binaries" / "qemu-win_extdep" / "share"
+        )
 
-        if args.os:
-            qemu_cmd += args.os
-            qemu_cmd += ["-m", "8192"]
-        else:
-            qemu_cmd += ["-m", "2048"]
+        qemu_cmd_builder = (
+            QemuCommandBuilder(qemu_exec, QemuArchitecture.Q35)
+            .with_cpu(core_count=4)
+            .with_machine()
+            .with_memory(8192 if args.os else 2048)
+            .with_firmware(code_fd, var_store)
+            .with_rom_path(rom_path)
+            .with_os_storage(args.os)
+            .with_usb_controller()
+            .with_usb_mouse()
+            .with_display()
+            .with_network(enabled=False)
+            .with_smbios()
+            .with_gdb_server(args.gdb_port)
+            .with_serial_port(args.serial_port)
+            .with_monitor_port(args.monitor_port)
+        )
 
         patch_cmd = [
             "python",
@@ -392,50 +342,30 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
         if not Path(qemu_dir).is_dir():
             qemu_dir = str(Path(qemu_exec).parent)
 
-        qemu_cmd = [
-            qemu_exec,
-            "-net",
-            "none",
-            "-L",
-            qemu_dir,
-            "-machine",
-            "sbsa-ref",
-            "-cpu",
-            "max,sve=off,sme=off",
-            "-smp",
-            "4",
-            "-global",
-            "driver=cfi.pflash01,property=secure,value=on",
-            "-drive",
-            f"if=pflash,format=raw,unit=0,file={str(code_fd.parent / 'SECURE_FLASH0.fd')}",
-            "-drive",
-            f"if=pflash,format=raw,unit=1,file={str(code_fd)},readonly=on",
-            "-device",
-            "qemu-xhci,id=usb",
-            "-device",
-            "usb-tablet,id=input0,bus=usb.0,port=1",
-            "-device",
-            "usb-kbd,id=input1,bus=usb.0,port=2",
-            "-smbios",
-            f"type=0,vendor='Patina',version='patina-sbsa-patched',date={datetime.now().strftime('%m/%d/%Y')},uefi=on",
-            "-smbios",
-            "type=1,manufacturer=OpenDevicePartnership,product='QEMU SBSA',family=QEMU,version='9.0.0',serial=42-42-42-42",
-            "-smbios",
-            "type=3,manufacturer=OpenDevicePartnership,serial=42-42-42-42,asset=SBSA,sku=SBSA",
-        ]
-        if args.serial_port:
-            qemu_cmd += ["-serial", f"tcp:127.0.0.1:{args.serial_port},server,nowait"]
-        else:
-            qemu_cmd += ["-serial", "stdio"]
+        var_store = str(code_fd.parent / "SECURE_FLASH0.fd")
+        rom_path = str(
+            SCRIPT_DIR / "QemuPkg" / "Binaries" / "qemu-win_extdep" / "share"
+        )
 
-        if args.gdb_port:
-            qemu_cmd += ["-gdb", f"tcp::{args.gdb_port}"]
+        qemu_cmd_builder = (
+            QemuCommandBuilder(qemu_exec, QemuArchitecture.SBSA)
+            .with_cpu(core_count=4)
+            .with_machine(smm_enabled=True)
+            .with_memory(8192 if args.os else 2048)
+            .with_firmware(code_fd, var_store)
+            .with_rom_path(rom_path)
+            .with_os_storage(args.os)
+            .with_usb_controller()
+            .with_usb_mouse()
+            .with_usb_keyboard()
+            .with_display()
+            .with_network(enabled=False)
+            .with_smbios()
+            .with_gdb_server(args.gdb_port)
+            .with_serial_port(args.serial_port)
+            .with_monitor_port(args.monitor_port)
+        )
 
-        if args.os:
-            qemu_cmd += args.os
-            qemu_cmd += ["-m", "8192"]
-        else:
-            qemu_cmd += ["-m", "2048"]
         patch_cmd = [
             "python",
             "patch.py",
@@ -455,6 +385,9 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
         build_cmd.append("--features")
         build_cmd.append(str(args.features))
 
+    (executable, qemu_args) = qemu_cmd_builder.build()
+
+    logging.info("QEMU Command: " + executable + " " + " ".join(qemu_args))
     return {
         "build_cmd": build_cmd,
         "build_target": args.build_target,
@@ -463,7 +396,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
         "efi_file": efi_file,
         "fw_patch_repo": args.fw_patch_repo,
         "patch_cmd": patch_cmd,
-        "qemu_cmd": qemu_cmd,
+        "qemu_cmd": [executable] + qemu_args,
         "patina_dxe_core_repo": args.patina_dxe_core_repo,
         "ref_fd": ref_fd,
         "toolchain": args.toolchain,

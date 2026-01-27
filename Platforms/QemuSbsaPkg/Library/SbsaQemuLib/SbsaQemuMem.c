@@ -8,17 +8,18 @@
 **/
 
 #include <PiPei.h>
-#include <Base.h>
-#include <Uefi/UefiSpec.h>
+#include <Uefi.h>
 #include <Library/ArmLib.h>
+#include <Library/HobLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PanicLib.h>
 #include <libfdt.h>
-#include <Library/HobLib.h>
+#include <Library/SecPlatformSmmuConfigLib.h>
+
 #include <Guid/DxeMemoryProtectionSettings.h>
-#include <Guid/MmMemoryProtectionSettings.h>
 
 // Number of Virtual Memory Map Descriptors
 #define MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS  5
@@ -53,12 +54,19 @@ ArmPlatformGetPeiMemory (
   return FALSE;
 }
 
-// MU_CHANGE END
+/**
+  Initialize the memory configuration for the platform based on the device tree blob.
 
-RETURN_STATUS
-EFIAPI
-SbsaQemuLibConstructor (
-  VOID
+  This function will parse the device tree blob to find the memory nodes and create
+  the necessary HOBs to describe the system memory layout for the PEI phase.
+
+  @return  EFI_INVALID_PARAMETER  One or more parameters are invalid.
+  @return  EFI_SUCCESS            The memory configuration was initialized successfully.
+**/
+EFI_STATUS
+InitializeMemoryConfiguration (
+  OUT EFI_PHYSICAL_ADDRESS  *UefiMemoryBase,
+  OUT UINT64                *UefiMemorySize
   )
 {
   VOID                            *DeviceTreeBase;
@@ -68,17 +76,17 @@ SbsaQemuLibConstructor (
   CONST CHAR8                     *Type;
   INT32                           Len;
   CONST UINT64                    *RegProp;
-  RETURN_STATUS                   PcdStatus;
   DXE_MEMORY_PROTECTION_SETTINGS  DxeSettings;
-  MM_MEMORY_PROTECTION_SETTINGS   MmSettings;
   UINTN                           FdtSize;
+  EFI_STATUS                      Status;
+
+  if ((UefiMemoryBase == NULL) || (UefiMemorySize == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   if (FeaturePcdGet (PcdEnableMemoryProtection) == TRUE) {
     DxeSettings = (DXE_MEMORY_PROTECTION_SETTINGS)DXE_MEMORY_PROTECTION_SETTINGS_DEBUG;
-    MmSettings  = (MM_MEMORY_PROTECTION_SETTINGS)MM_MEMORY_PROTECTION_SETTINGS_DEBUG;
 
-    MmSettings.HeapGuardPolicy.Fields.MmPageGuard                    = 1;
-    MmSettings.HeapGuardPolicy.Fields.MmPoolGuard                    = 1;
     DxeSettings.ImageProtectionPolicy.Fields.ProtectImageFromUnknown = 1;
 
     // ARM64 does not support having page or pool guards set for these memory types
@@ -100,23 +108,18 @@ SbsaQemuLibConstructor (
       &DxeSettings,
       sizeof (DxeSettings)
       );
-
-    BuildGuidDataHob (
-      &gMmMemoryProtectionSettingsGuid,
-      &MmSettings,
-      sizeof (MmSettings)
-      );
   }
-
   NewBase = 0;
   NewSize = 0;
 
   DeviceTreeBase = (VOID *)(UINTN)PcdGet64 (PcdDeviceTreeInitialBaseAddress);
-  ASSERT (DeviceTreeBase != NULL);
-
+  if (DeviceTreeBase == NULL) {
+    PANIC ("Device Tree Base Address is not set. Cannot continue without a valid Device Tree Blob.\n");
+  }
   // Make sure we have a valid device tree blob
-  ASSERT (fdt_check_header (DeviceTreeBase) == 0);
-
+  if (fdt_check_header (DeviceTreeBase) != 0) {
+    PANIC ("Device Tree Blob header is not valid. Cannot continue without a valid Device Tree Blob.\n");
+  }
   // Look for the lowest memory node
   for (Prev = 0; ; Prev = Node) {
     Node = fdt_next_node (DeviceTreeBase, Prev, NULL);
@@ -165,14 +168,63 @@ SbsaQemuLibConstructor (
     EfiBootServicesData
     );
 
-  // Make sure the start of DRAM matches our expectation
-  ASSERT (FixedPcdGet64 (PcdSystemMemoryBase) == NewBase);
-  // TODO: This is carved out by the BL31 during DT build up.
-  PcdStatus = PcdSet64S (PcdSystemMemorySize, NewSize - PcdGet64 (PcdMmBufferSize));
-  ASSERT_RETURN_ERROR (PcdStatus);
-  PcdStatus = PcdSet64S (PcdMmBufferBase, CurBase + NewSize - PcdGet64 (PcdMmBufferSize));
-  ASSERT_RETURN_ERROR (PcdStatus);
+    // Make sure the start of DRAM matches our expectation
+  if (FixedPcdGet64 (PcdSystemMemoryBase) != NewBase) {
+    PANIC ("System Memory Base Mismatch.\n");
+  }
 
+  if (NewSize > PcdGet64 (PcdSystemMemorySize)) {
+    BuildResourceDescriptorV2 (
+      EFI_RESOURCE_SYSTEM_MEMORY,
+      (EFI_RESOURCE_ATTRIBUTE_PRESENT |
+       EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
+       EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
+       EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
+       EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE |
+       EFI_RESOURCE_ATTRIBUTE_TESTED),
+      NewBase + PcdGet64 (PcdSystemMemorySize),
+      NewSize - PcdGet64 (PcdSystemMemorySize),
+      EFI_MEMORY_WB,
+      NULL
+      );
+  } else {
+    NewSize = PcdGet64 (PcdSystemMemorySize);
+  }
+
+  BuildResourceDescriptorV2 (
+    EFI_RESOURCE_SYSTEM_MEMORY,
+    (EFI_RESOURCE_ATTRIBUTE_PRESENT |
+     EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
+     EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
+     EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
+     EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE |
+     EFI_RESOURCE_ATTRIBUTE_TESTED),
+    NewBase,
+    PcdGet64 (PcdSystemMemorySize),
+    EFI_MEMORY_WB,
+    NULL
+    );
+
+  *UefiMemoryBase = NewBase;
+  *UefiMemorySize = NewSize;
+
+  Status = BuildSmmuConfigHob ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to build SMMU Config HOB\n", __func__));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+// MU_CHANGE END
+
+RETURN_STATUS
+EFIAPI
+SbsaQemuLibConstructor (
+  VOID
+  )
+{
   return RETURN_SUCCESS;
 }
 
@@ -196,6 +248,33 @@ ArmPlatformGetVirtualMemoryMap (
 {
   ARM_MEMORY_REGION_DESCRIPTOR  *VirtualMemoryTable;
 
+  UINT64      TpmBase;
+  UINT32      TpmSize;
+
+  EFI_PHYSICAL_ADDRESS  UefiMemoryBase;
+  UINT64                UefiMemorySize;
+  EFI_STATUS           Status;
+
+  TpmBase = PcdGet64 (PcdTpmBaseAddress);
+  TpmSize = PcdGet32 (PcdTpmCrbRegionSize);
+
+  if (TpmBase != 0) {
+    DEBUG ((DEBUG_INFO, "%a: TPM @ 0x%lx\n", __func__, TpmBase));
+    BuildMemoryAllocationHob (TpmBase, TpmSize, EfiACPIMemoryNVS);
+  }
+
+  BuildMemoryAllocationHob (
+    PcdGet64 (PcdMmBufferBase),
+    PcdGet64 (PcdMmBufferSize),
+    EfiReservedMemoryType
+    );
+
+  BuildMemoryAllocationHob (
+    PcdGet64 (PcdAdvancedLoggerBase),
+    PcdGet32 (PcdAdvancedLoggerPages) * EFI_PAGE_SIZE,
+    EfiRuntimeServicesData
+    );
+
   ASSERT (VirtualMemoryMap != NULL);
 
   VirtualMemoryTable = AllocatePool (
@@ -208,10 +287,16 @@ ArmPlatformGetVirtualMemoryMap (
     return;
   }
 
+  Status = InitializeMemoryConfiguration (&UefiMemoryBase, &UefiMemorySize);
+  if (EFI_ERROR (Status)) {
+    PANIC ("Failed to initialize memory configuration from device tree.\n");
+    return;
+  }
+
   // System DRAM
-  VirtualMemoryTable[0].PhysicalBase = PcdGet64 (PcdSystemMemoryBase);
+  VirtualMemoryTable[0].PhysicalBase = UefiMemoryBase;
   VirtualMemoryTable[0].VirtualBase  = VirtualMemoryTable[0].PhysicalBase;
-  VirtualMemoryTable[0].Length       = PcdGet64 (PcdSystemMemorySize);
+  VirtualMemoryTable[0].Length       = UefiMemorySize;
   VirtualMemoryTable[0].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
 
   DEBUG ((
@@ -338,6 +423,26 @@ ArmPlatformGetVirtualMemoryMap (
     RESOURCE_CAP,
     0xf0000000,
     0x10000000,
+    EFI_MEMORY_UC,
+    NULL
+    );
+
+  // Watchdog Refresh
+  BuildResourceDescriptorV2 (
+    EFI_RESOURCE_MEMORY_MAPPED_IO,
+    RESOURCE_CAP,
+    0x50010000,
+    0x00001000,
+    EFI_MEMORY_UC,
+    NULL
+    );
+
+  // Watchdog Control
+  BuildResourceDescriptorV2 (
+    EFI_RESOURCE_MEMORY_MAPPED_IO,
+    RESOURCE_CAP,
+    0x50011000,
+    0x00001000,
     EFI_MEMORY_UC,
     NULL
     );

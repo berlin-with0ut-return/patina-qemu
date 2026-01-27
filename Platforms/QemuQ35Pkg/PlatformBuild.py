@@ -81,17 +81,10 @@ class CommonPlatform():
     def add_common_command_line_options(parserObj) -> None:
         """Adds command line options common to settings managers."""
         codeql_helpers.add_command_line_option(parserObj)
-        parserObj.add_argument(
-            "-r", "--rust",
-            dest="build_rust",
-            action="store_true",
-            help="Builds this platform with additional Rust EFI modules (this is independent of the Patina DXE Core). Default: False."
-        )
 
     @staticmethod
     def get_common_command_line_options(settings, args) -> None:
         """Retrieves command line options common to settings managers."""
-        settings.build_rust = args.build_rust
         settings.codeql = CommonPlatform.is_codeql_enabled(args)
 
     @staticmethod
@@ -100,12 +93,10 @@ class CommonPlatform():
         return codeql_helpers.is_codeql_enabled_on_command_line(args)
 
     @staticmethod
-    def get_active_scopes(codeql_enabled: bool, build_rust: bool) -> Tuple[str]:
+    def get_active_scopes(codeql_enabled: bool) -> Tuple[str]:
         """Returns the active scopes for the platform."""
         active_scopes = CommonPlatform.Scopes
         active_scopes += codeql_helpers.get_scopes(codeql_enabled)
-        if build_rust:
-            active_scopes += ("rust-ci",)
 
         if codeql_enabled:
             codeql_filter_files = [str(n) for n in glob.glob(
@@ -184,7 +175,7 @@ class SettingsManager(UpdateSettingsManager, SetupSettingsManager, PrEvalSetting
 
     def GetActiveScopes(self):
         ''' return tuple containing scopes that should be active for this process '''
-        return CommonPlatform.get_active_scopes(self.codeql, self.build_rust)
+        return CommonPlatform.get_active_scopes(self.codeql)
 
     def FilterPackagesToTest(self, changedFilesList: list, potentialPackagesList: list) -> list:
         ''' Filter other cases that this package should be built
@@ -212,7 +203,8 @@ class SettingsManager(UpdateSettingsManager, SetupSettingsManager, PrEvalSetting
 
         The tuple should be (<workspace relative path to dsc file>, <input dictionary of dsc key value pairs>)
         '''
-        return ("QemuQ35Pkg/QemuQ35Pkg.dsc", {})
+        dsc = CommonPlatform.GetDscName(",".join(self.ActualArchitectures))
+        return (f"QemuQ35Pkg/{dsc}", {})
 
     def GetName(self):
         return "QemuQ35"
@@ -272,7 +264,7 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
 
     def GetActiveScopes(self):
         ''' return tuple containing scopes that should be active for this process '''
-        return CommonPlatform.get_active_scopes(self.codeql, self.build_rust)
+        return CommonPlatform.get_active_scopes(self.codeql)
 
     def GetName(self):
         ''' Get the name of the repo, platform, or product being build '''
@@ -307,7 +299,6 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
     def SetPlatformEnv(self):
         logging.debug("PlatformBuilder SetPlatformEnv")
         self.env.SetValue("PRODUCT_NAME", "QemuQ35", "Platform Hardcoded")
-        self.env.SetValue("BLD_*_BUILD_RUST_CODE", str(self.build_rust).upper(), "Set via `--rust` command line option")
         self.env.SetValue("EMPTY_DRIVE", "FALSE", "Default to false")
         self.env.SetValue("RUN_TESTS", "FALSE", "Default to false")
         self.env.SetValue("QEMU_HEADLESS", "FALSE", "Default to false")
@@ -331,6 +322,13 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
                           "Platform Hardcoded"
         )
         self.env.SetValue('CONF_PROFILE_NAMES', "P0,P1", "Platform Hardcoded")
+
+        tool_chain_override_on_cmdline = any(arg.startswith("TOOL_CHAIN_TAG=") for arg in sys.argv)
+        if not tool_chain_override_on_cmdline:
+            if os.name == 'nt':
+                self.env.SetValue("TOOL_CHAIN_TAG", "VS2022", f"Default VS2022 toolchain based on host OS ({os.name})")
+            else:
+                self.env.SetValue("TOOL_CHAIN_TAG", "GCC5", f"Default GCC5 toolchain based on host OS ({os.name})")
 
         # Globally set CodeQL failures to be ignored in this repo.
         # Note: This has no impact if CodeQL is not active/enabled.

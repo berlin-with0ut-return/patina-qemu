@@ -1,0 +1,11 @@
+## @file
+# QEMU Command Builder for Q35 and SBSA architectures. Below module path will be
+# added to the PYTHONPATH to allow loading of this module.
+#
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+{
+  "scope": "global",
+  "flags": ["set_pypath"]
+}

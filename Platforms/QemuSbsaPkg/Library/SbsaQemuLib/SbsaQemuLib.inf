@@ -28,6 +28,8 @@
   QemuPkg/QemuPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   QemuSbsaPkg/QemuSbsaPkg.dec
+  SecurityPkg/SecurityPkg.dec
+  AdvLoggerPkg/AdvLoggerPkg.dec
 
 [LibraryClasses]
   ArmLib
@@ -37,27 +39,30 @@
   MemoryAllocationLib
   PcdLib
   HobLib
-
-[Guids]
-  gMmMemoryProtectionSettingsGuid
-  gDxeMemoryProtectionSettingsGuid
+  PanicLib
+  SecPlatformSmmuConfigLib
 
 [Pcd]
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdSystemMemorySize
-  gQemuSbsaPkgTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress
-  gQemuSbsaPkgTokenSpaceGuid.PcdDeviceTreeAllocationPadding
   gArmTokenSpaceGuid.PcdMmBufferBase
-
-[FixedPcd]
+  gQemuPkgTokenSpaceGuid.PcdEnableMemoryProtection
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmBaseAddress
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmCrbRegionSize
+  
+  [FixedPcd]
   gArmTokenSpaceGuid.PcdFdBaseAddress
   gArmTokenSpaceGuid.PcdFdSize
   gArmTokenSpaceGuid.PcdArmPrimaryCoreMask
   gArmTokenSpaceGuid.PcdArmPrimaryCore
   gArmTokenSpaceGuid.PcdMmBufferSize
+  gQemuSbsaPkgTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress
+  gQemuSbsaPkgTokenSpaceGuid.PcdDeviceTreeAllocationPadding
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerBase
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPages
 
-[FeaturePcd]
-  gQemuPkgTokenSpaceGuid.PcdEnableMemoryProtection
+[Guids]
+  gDxeMemoryProtectionSettingsGuid
 
 [Ppis]
   gArmMpCoreInfoPpiGuid

@@ -31,10 +31,10 @@ DEFINE FVMAIN_COMPACT_SIZE  = 0x2ff000
   DEFINE SECURE_FLASH_REGION_BL1_SIZE                                 = 0x00012000
 #===================================================================================
   DEFINE SECURE_FLASH_REGION_FIP_OFFSET                               = 0x00012000
-  DEFINE SECURE_FLASH_REGION_FIP_SIZE                                 = 0x00300000
+  DEFINE SECURE_FLASH_REGION_FIP_SIZE                                 = 0x009EE000
 #===================================================================================
-  # Unused bytes offset                                                 0x00312000
-  # Unused bytes size                                                   0x00CEE000
+  # Unused bytes offset                                                 0x00A00000
+  # Unused bytes size                                                   0x005EE000
 #===================================================================================
   DEFINE SECURE_FLASH_NVSTORAGE_OFFSET                                = 0x01000000
   DEFINE SECURE_FLASH_NVSTORAGE_SIZE                                  = 0x000C0000
@@ -153,16 +153,27 @@ NumBlocks     = 0x0e00
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = FV_STANDALONE_MM_COMPACT
 
-[FD.BL32_AP_MM_SP1]
+[FD.BL32_AP_MS_SP]
 BaseAddress   = 0x20410000|gArmTokenSpaceGuid.PcdFdBaseAddress  # UEFI in DRAM + 128MB.
-Size          = 0x00014000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the device (64MiB).
+Size          = 0x003F0000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the device (64MiB).
 ErasePolarity = 1
 
 BlockSize     = 0x00001000
-NumBlocks     = 0x00014
+NumBlocks     = 0x003F0
 
-0x00000000|0x00014000
-FV = FV_STANDALONE_MM_SECURE_PARTITION1
+0x00000000|0x003F0000
+FV = FV_MS_SECURE_PARTITION
+
+[FD.BL32_AP_MS_SP_RUST]
+BaseAddress   = 0x20800000|gArmTokenSpaceGuid.PcdFdBaseAddress  # UEFI in DRAM + 128MB.
+Size          = 0x00400000|gArmTokenSpaceGuid.PcdFdSize         # The size in bytes of the device (64MiB).
+ErasePolarity = 1
+
+BlockSize     = 0x00001000
+NumBlocks     = 0x00400
+
+0x00000000|0x00400000
+# Placeholder only
 
 [FD.QEMU_EFI]
 BaseAddress   = 0x10000000|gArmTokenSpaceGuid.PcdFdBaseAddress
@@ -224,6 +235,10 @@ READ_LOCK_STATUS   = TRUE
   INF EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
   INF EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
   INF MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
+  INF MdeModulePkg/Universal/FvSimpleFileSystemDxe/FvSimpleFileSystemDxe.inf
+  INF ArmPkg/Drivers/ArmPsciMpServicesDxe/ArmPsciMpServicesDxe.inf
+  INF UefiTestingPkg/FunctionalSystemTests/MpManagement/Driver/MpManagement.inf
+  INF UefiTestingPkg/FunctionalSystemTests/MpManagement/App/MpManagementTestApp.inf
 
   !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.DXE.inc.fdf
 
@@ -238,7 +253,7 @@ READ_LOCK_STATUS   = TRUE
 
   # INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
-  INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+  INF ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf
 
   #
   # FAT filesystem + GPT/MBR partitioning + UDF filesystem + virtio-fs
@@ -294,6 +309,9 @@ READ_LOCK_STATUS   = TRUE
   # Policy and configuration
   #
   INF PolicyServicePkg/PolicyService/DxeMm/PolicyDxe.inf
+  INF OemPkg/OemConfigPolicyCreatorDxe/OemConfigPolicyCreatorDxe.inf
+  INF QemuSbsaPkg/ConfigKnobs/ConfigKnobs.inf
+  INF OemPkg/DeviceStateDxe/DeviceStateDxe.inf
 
   #
   # Frontpages
@@ -306,7 +324,6 @@ READ_LOCK_STATUS   = TRUE
   #
   # MFCI support
   #
-  # TODO: This is not enabled, due to variable PEI is currently not supported...
   INF MfciPkg/MfciDxe/MfciDxe.inf
 
   #
@@ -383,6 +400,11 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Bus/Usb/UsbMassStorageDxe/UsbMassStorageDxe.inf
 
   #
+  # SMMU Support
+  #
+  INF ArmPkg/Drivers/SmmuDxe/SmmuDxe.inf
+
+  #
   # TPM2 support
   #
 !if $(TPM2_ENABLE) == TRUE
@@ -404,14 +426,7 @@ READ_LOCK_STATUS   = TRUE
   INF  MsWheaPkg/MsWheaReport/Dxe/MsWheaReportDxe.inf
   INF  MsCorePkg/MuVarPolicyFoundationDxe/MuVarPolicyFoundationDxe.inf
   INF  MsCorePkg/LoadOptionVariablePolicyDxe/LoadOptionVariablePolicyDxe.inf
-!if $(BUILD_RUST_CODE) == TRUE
-  INF  MsCorePkg/HelloWorldRustDxe/HelloWorldRustDxe.inf
-  INF  HidPkg/UsbHidDxe/UsbHidDxe.inf
-  INF  HidPkg/UefiHidDxe/UefiHidDxe.inf
-  INF  QemuQ35Pkg/RustDriverDxe/RustDriverDxe.inf
-!else
   INF  MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
-!endif
   INF  MsGraphicsPkg/PrintScreenLogger/PrintScreenLogger.inf
   INF  MsCorePkg/AcpiRGRT/AcpiRgrt.inf
   INF  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
@@ -443,7 +458,7 @@ READ_LOCK_STATUS   = TRUE
   # Graphic icons and logos
   #
   FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdLogoFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/BootLogo.bmp
+    SECTION RAW = Logo/patina_boot_logo.bmp
     SECTION UI = "Logo"
   }
   FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdFrontPageLogoFile) {
@@ -534,49 +549,19 @@ READ_STATUS        = TRUE
 READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
-  INF ArmPlatformPkg/Sec/Sec.inf
-  INF MdeModulePkg/Core/Pei/PeiMain.inf
-  INF SecurityPkg/RandomNumberGenerator/RngPei/RngPei.inf
-  INF ArmPlatformPkg/PlatformPei/PlatformPeim.inf
-  INF ArmPlatformPkg/MemoryInitPei/MemoryInitPeim.inf
-  INF ArmPkg/Drivers/CpuPei/CpuPei.inf
-  INF ArmPkg/Drivers/MmCommunicationPei/MmCommunicationPei.inf
-  INF MdeModulePkg/Universal/Variable/MmVariablePei/MmVariablePei.inf
-  INF MdeModulePkg/Universal/PCD/Pei/Pcd.inf
-  INF MdeModulePkg/Universal/Variable/Pei/VariablePei.inf
-  INF MsGraphicsPkg/MsUiTheme/Pei/MsUiThemePpi.inf
-  INF MsGraphicsPkg/MsEarlyGraphics/Pei/MsEarlyGraphics.inf
-  INF MdeModulePkg/Core/DxeIplPeim/DxeIpl.inf
-  INF MsCorePkg/Core/GuidedSectionExtractPeim/GuidedSectionExtract.inf
-  INF MsWheaPkg/MsWheaReport/Pei/MsWheaReportPei.inf
-  INF OemPkg/DeviceStatePei/DeviceStatePei.inf
-
-  !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.PEI.inc.fdf
-
-  INF MfciPkg/MfciPei/MfciPei.inf
-
-  INF  PolicyServicePkg/PolicyService/Pei/PolicyPei.inf
-  INF  DebuggerFeaturePkg/DebugConfigPei/DebugConfigPei.inf
-
-  INF  QemuSbsaPkg/ConfigKnobs/ConfigKnobs.inf
-  INF  OemPkg/OemConfigPolicyCreatorPei/OemConfigPolicyCreatorPei.inf
-
-!if $(TPM2_ENABLE) == TRUE
-  INF MdeModulePkg/Universal/ResetSystemPei/ResetSystemPei.inf
-  INF SecurityPkg/Tcg/Tcg2Pei/Tcg2Pei.inf
-!endif
-
-  FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
-    SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
-      SECTION FV_IMAGE = FVMAIN
-    }
-  }
+  INF ArmPlatformPkg/PeilessSec/PeilessSec.inf
 
   # Use externally built Rust DXE core binary.
   # Keep in a separate FV with the compressed DXE Core to make the FV easy to patch.
   FILE FV_IMAGE = 7BB6C4A8-FECD-4F0D-9F5A-2E03ADD35B96 {
     SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
       SECTION FV_IMAGE = RUST_DXE_CORE
+    }
+  }
+
+  FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
+    SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
+      SECTION FV_IMAGE = FVMAIN
     }
   }
 
@@ -608,7 +593,7 @@ READ_LOCK_STATUS   = TRUE
   INF SecurityPkg/Tcg/Tcg2StandaloneMmArm/Tcg2StandaloneMmArm.inf
 !endif
 
-[FV.FV_STANDALONE_MM_SECURE_PARTITION1]
+[FV.FV_MS_SECURE_PARTITION]
 FvAlignment        = 16
 ERASE_POLARITY     = 1
 MEMORY_MAPPED      = TRUE
@@ -664,19 +649,6 @@ READ_LOCK_STATUS   = TRUE
 [Rule.Common.SEC.SELF_RELOC]
   FILE SEC = $(NAMED_GUID) {
     TE  TE Align = Auto             $(INF_OUTPUT)/$(MODULE_NAME).efi
-  }
-
-[Rule.Common.PEI_CORE]
-  FILE PEI_CORE = $(NAMED_GUID) FIXED {
-    TE     TE Align = Auto              $(INF_OUTPUT)/$(MODULE_NAME).efi
-    UI     STRING ="$(MODULE_NAME)" Optional
-  }
-
-[Rule.Common.PEIM]
-  FILE PEIM = $(NAMED_GUID) FIXED {
-     PEI_DEPEX PEI_DEPEX Optional       $(INF_OUTPUT)/$(MODULE_NAME).depex
-     TE       TE Align = Auto           $(INF_OUTPUT)/$(MODULE_NAME).efi
-     UI       STRING="$(MODULE_NAME)" Optional
   }
 
 [Rule.Common.DXE_CORE]
@@ -737,16 +709,8 @@ READ_LOCK_STATUS   = TRUE
   }
 
 [Rule.Common.MM_CORE_STANDALONE]
-  FILE SEC = $(NAMED_GUID) RELOCS_STRIPPED FIXED {
+  FILE SEC = $(NAMED_GUID) {
     PE32  PE32 Align = Auto             $(INF_OUTPUT)/$(MODULE_NAME).efi
-  }
-
-[Rule.Common.PEIM.BINARY]
-  FILE PEIM = $(NAMED_GUID) {
-    PEI_DEPEX PEI_DEPEX Optional      |.depex
-    PE32      PE32     Align = Auto   |.efi
-    UI        STRING="$(MODULE_NAME)" Optional
-    VERSION   STRING="$(INF_VERSION)" Optional BUILD_NUM=$(BUILD_NUMBER)
   }
 
 [Rule.Common.DXE_DRIVER.BINARY]
