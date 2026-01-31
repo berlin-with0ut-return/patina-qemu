@@ -148,7 +148,7 @@ jobs:
 
       # Run the readiness tool
       - name: Readiness Tool
-        if: ${{ matrix.readiness != null }}
+        if: ${{ matrix.readiness }}
         uses: ./.github/actions/build-readiness/
         with:
           platform-config: ${{ matrix.config }}

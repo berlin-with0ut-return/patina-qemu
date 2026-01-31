@@ -1,12 +1,12 @@
-# A callable Github Action to build a Patina QEMU platform firmware that supports the stuart build system.
+# A callable GitHub Action to run the Patina QEMU readiness validation tool against a platform build that uses the Stuart build system.
 #
 ##
 # Copyright (c) Microsoft Corporation.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
-name: Build QEMU Readiness Tool
-description: Test QEMU platform requirements
+name: Run QEMU Readiness Tool
+description: Test QEMU platform requirements with the Patina Readiness tool
 
 inputs: 
   platform-config:
@@ -128,7 +128,6 @@ runs:
       fi
 
 
-  # Optional: Run readiness tool
   - name: Run readiness validator
     shell: bash
     run: |
