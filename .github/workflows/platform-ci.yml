@@ -178,20 +178,13 @@ jobs:
         include:
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
-            tool-chain: 'VS2022'
-            platform: 'Q35'
-            os: 'windows-latest'
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi'
-          - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
-            target: 'DEBUG'
-            tool-chain: 'VS2022'
-            architecture: 'IA32,X64'
+            tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
             readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
-            tool-chain: 'VS2022'
+            tool-chain:  ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
@@ -224,7 +217,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r pip-requirements.txt
 
-      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      # Build with readiness tool
+      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}}
         id: build-platform
         uses: ./.github/actions/build-platform
         with:
@@ -233,17 +227,20 @@ jobs:
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
           tool-chain: ${{ matrix.tool-chain }}
-          # Only pass architecture if it is defined in the matrix
-          architecture: ${{ matrix.architecture || '' }}
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
 
-      # Run with readiness flags to capture output
-      - name: Run and capture output (stuart_build)
-        id: run-output
-        shell: bash
-        run: |      
-          # dead loop runs forever, so timeout after logs are ready
-          timeout 120s stuart_build -c  ${{ matrix.config }} --FlashOnly EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
+      # Run readiness tool (timeout expected - QEMU runs in dead loop until capture completes)
+      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}}
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: ./.github/actions/build-platform
+        with:
+          command: 'flash'
+          platform-config: ${{ matrix.config }}
+          platform-name: ${{ matrix.platform }}
+          target: ${{ matrix.target }}
+          tool-chain: ${{ matrix.tool-chain }}
+          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
 
       # Extract json from build output
       - name: Extract JSON block from logfile
