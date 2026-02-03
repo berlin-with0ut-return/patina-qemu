@@ -1,0 +1,141 @@
+# A callable GitHub Action to run the Patina QEMU readiness validation tool against a platform build that uses the Stuart build system.
+#
+##
+# Copyright (c) Microsoft Corporation.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+name: Run QEMU Readiness Tool
+description: Test QEMU platform requirements with the Patina Readiness tool
+
+inputs: 
+  platform-config:
+    description: 'Path to the Stuart platform configuration file (.py)'
+    required: true
+  platform:
+    description: 'Name of the platform being built (for logging purposes)'
+    required: true
+  tool-chain:
+    description: 'Tool chain to use (e.g., VS2022, GCC)'
+    required: false
+    default: 'VS2022'
+
+runs:
+  using: composite
+
+  steps:
+  # Create a temporary directory for capture output
+  - name: Create Temporary Directory
+    id: tempdir
+    shell: bash
+    run: |
+      mkdir -p "$RUNNER_TEMP"/build-logs
+      echo "path="$RUNNER_TEMP"/build-logs" >> $GITHUB_OUTPUT
+
+  # Cannot use ENV in a composite action, so lets create our reusable argument string here
+  - name: Setup Total Stuart arguments
+    id: stuart
+    shell: bash
+    run: |
+      ARGS="TARGET=DEBUG TOOL_CHAIN_TAG=${{ inputs.tool-chain }} QEMU_HEADLESS=TRUE"
+      echo "arguments=$ARGS" >> $GITHUB_OUTPUT
+
+  # Build platform normally without readiness flags
+  - name: Build platform (stuart_build)
+    id: build-platform
+    shell: bash
+    run: |
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
+        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi"
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
+        override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi"
+      fi
+      stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} BLD_*_DXE_CORE_BINARY_OVERRIDE="$override_value"
+
+  # Run with readiness flags to capture output
+  - name: Run and capture output (stuart_build)
+    id: run-output
+    shell: bash
+    run: |      
+      # dead loop runs forever, so timeout after logs are ready
+      timeout 120s stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
+
+  # Extract json from build output
+  - name: Extract JSON block from logfile
+    shell: bash
+    run: |
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
+        logfile="Build/BUILDLOG_QemuSbsaPkg_Run.txt"
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
+        logfile="Build/BUILDLOG_QemuQ35Pkg_Run.txt"
+      fi
+
+      capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
+
+      # Skip log lines and extract JSON content (from first { to last })
+      sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$capture_file"
+      
+      # Verify JSON was extracted
+      if [ -s "$capture_file" ] && grep -q '{' "$capture_file" && grep -q '}' "$capture_file"; then
+        echo "Filtered JSON written to $capture_file"
+      else
+        echo "Error: No JSON block found in logfile" >&2
+        exit 1
+      fi
+
+  # Optional: Move the build logs to the temporary directory if it was created
+  - name: Move build log
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    shell: bash
+    env:
+      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
+    run: |
+      shopt -s globstar nullglob
+      files=(**/BUILDLOG* **/BUILD_REPORT.TXT **/OVERRIDELOG.TXT)
+
+      if ((${#files[@]})); then
+        echo "Moving ${#files[@]} log files"
+        mv "${files[@]}" "$TEMP_DIR"
+      else
+        echo "No matching log files found"
+      fi
+
+
+  - name: Run readiness validator
+    shell: bash
+    run: |
+      capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
+      validator_log="${{ steps.tempdir.outputs.path }}/validator_output.txt"
+      
+      if [ "${{ inputs.platform }}" = "SBSA" ]; then
+        chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64 -f "$capture_file" 2>&1 | tee "$validator_log"
+      elif [ "${{ inputs.platform }}" = "Q35" ]; then
+        ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86_64.exe -f "$capture_file" 2>&1 | tee "$validator_log"
+      fi
+
+  # Optional: Move the run logs to the temporary directory if it was created
+  - name: Move run log
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    shell: bash
+    env:
+      TEMP_DIR: ${{ steps.tempdir.outputs.path }}
+    run: |
+      shopt -s globstar nullglob
+      files=(**/BUILDLOG_QemuQ35Pkg_Run.txt **/BUILDLOG_QemuSbsaPkg_Run.txt)
+
+      if ((${#files[@]})); then
+        echo "Moving ${#files[@]} log files"
+        mv "${files[@]}" "$TEMP_DIR"
+      else
+        echo "No matching log files found"
+      fi
+
+  # Optional: Publish the logs as an artifact if the temporary directory was created
+  - name: Publish Logs
+    if: ${{ always() && steps.tempdir.outputs.path }}
+    uses: actions/upload-artifact@v4
+    with:
+      # Specify architecture if it is not empty
+      name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.platform && format('{0}-', inputs.platform) || '' }}${{ github.run_id }}
+      path: ${{ steps.tempdir.outputs.path }}

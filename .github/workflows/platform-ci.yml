@@ -47,6 +47,7 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: true
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
@@ -96,6 +97,7 @@ jobs:
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: true
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
@@ -106,7 +108,7 @@ jobs:
     steps:
       # Checkout the repository to the runner or container
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       # Configure git for use in the container. Specifically needed for the FFA builds
       - name: Container Configuration
@@ -120,7 +122,7 @@ jobs:
       # in the container.
       - name: Setup Python ${{ needs.vars.outputs.python-version }}
         if: ${{ matrix.container == null }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ needs.vars.outputs.python-version }}
           cache: 'pip'
@@ -131,38 +133,27 @@ jobs:
         run: pip install -r pip-requirements.txt
       
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
-      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        id: build-platform
-        uses: ./.github/actions/build-platform
+      - name: Build and Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+        uses: ./.github/actions/build-platform/
         with:
-          command: 'build'
           platform-config: ${{ matrix.config }}
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
           tool-chain: ${{ matrix.tool-chain }}
           # Only pass architecture if it is defined in the matrix
           architecture: ${{ matrix.architecture || '' }}
-          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE FILE_REGEX=*TestApp*.efi RUN_TESTS=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
+          flash: 'true'
+          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
+          publish-logs: 'true'
 
-      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
-        uses: ./.github/actions/build-platform
+      # Run the readiness tool
+      - name: Readiness Tool
+        if: ${{ matrix.readiness }}
+        uses: ./.github/actions/test-platform-readiness/
         with:
-          command: 'flash'
           platform-config: ${{ matrix.config }}
-          platform-name: ${{ matrix.platform }}
-          target: ${{ matrix.target }}
+          platform: ${{ matrix.platform }}
           tool-chain: ${{ matrix.tool-chain }}
-          # Only pass architecture if it is defined in the matrix
-          architecture: ${{ matrix.architecture || '' }}
-          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE FILE_REGEX=*TestApp*.efi RUN_TESTS=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
-      
-      - name: Publish Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          # Specify architecture if it is not empty
-          name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}${{ matrix.architecture && format('-{0}', matrix.architecture) || '' }}
-          path: ${{ steps.build-platform.outputs.log-path }}
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.
