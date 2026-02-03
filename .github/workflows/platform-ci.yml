@@ -158,7 +158,7 @@ jobs:
 
       - name: Publish Logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           # Specify architecture if it is not empty
           name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}${{ matrix.architecture && format('-{0}', matrix.architecture) || '' }}
@@ -181,18 +181,21 @@ jobs:
             tool-chain: 'VS2022'
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain: 'VS2022'
             architecture: 'IA32,X64'
             platform: 'Q35'
             os: 'windows-latest'
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain: 'VS2022'
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
+            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
 
     steps:
       # Checkout the repository to the runner or container
@@ -220,18 +223,19 @@ jobs:
       # Install the pip dependencies needed to run stuart for the platform(s)
       - name: Install dependencies
         run: pip install -r pip-requirements.txt
-      
-      # Build platform normally without readiness flags
-      - name: Build platform (stuart_build)
+
+      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
         id: build-platform
-        shell: bash
-        run: |
-          if [ "${{ inputs.platform }}" = "SBSA" ]; then
-            override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi"
-          elif [ "${{ inputs.platform }}" = "Q35" ]; then
-            override_value="QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi"
-          fi
-          stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} BLD_*_DXE_CORE_BINARY_OVERRIDE="$override_value"
+        uses: ./.github/actions/build-platform
+        with:
+          command: 'build'
+          platform-config: ${{ matrix.config }}
+          platform-name: ${{ matrix.platform }}
+          target: ${{ matrix.target }}
+          tool-chain: ${{ matrix.tool-chain }}
+          # Only pass architecture if it is defined in the matrix
+          architecture: ${{ matrix.architecture || '' }}
+          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
 
       # Run with readiness flags to capture output
       - name: Run and capture output (stuart_build)
@@ -239,19 +243,19 @@ jobs:
         shell: bash
         run: |      
           # dead loop runs forever, so timeout after logs are ready
-          timeout 120s stuart_build -c ${{ inputs.platform-config }} --FlashOnly ${{ steps.stuart.outputs.arguments }} EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
+          timeout 120s stuart_build -c  ${{ matrix.config }} --FlashOnly EMPTY_DRIVE=TRUE || [ $? -eq 124 ]
 
       # Extract json from build output
       - name: Extract JSON block from logfile
         shell: bash
         run: |
-          if [ "${{ inputs.platform }}" = "SBSA" ]; then
+          if [ "${{ matrix.platform }}" = "SBSA" ]; then
             logfile="Build/BUILDLOG_QemuSbsaPkg_Run.txt"
-          elif [ "${{ inputs.platform }}" = "Q35" ]; then
+          elif [ "${{ matrix.platform }}" = "Q35" ]; then
             logfile="Build/BUILDLOG_QemuQ35Pkg_Run.txt"
           fi
 
-          capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
+          capture_file="capture.json"
 
           # Skip log lines and extract JSON content (from first { to last })
           sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$capture_file"
@@ -264,63 +268,31 @@ jobs:
             exit 1
           fi
 
-      # Optional: Move the build logs to the temporary directory if it was created
-      - name: Move build log
-        if: ${{ always() && steps.tempdir.outputs.path }}
-        shell: bash
-        env:
-          TEMP_DIR: ${{ steps.tempdir.outputs.path }}
-        run: |
-          shopt -s globstar nullglob
-          files=(**/BUILDLOG* **/BUILD_REPORT.TXT **/OVERRIDELOG.TXT)
-
-          if ((${#files[@]})); then
-            echo "Moving ${#files[@]} log files"
-            mv "${files[@]}" "$TEMP_DIR"
-          else
-            echo "No matching log files found"
-          fi
-
-
       - name: Run readiness validator
         shell: bash
         run: |
-          capture_file="${{ steps.tempdir.outputs.path }}/capture.json"
-          validator_log="${{ steps.tempdir.outputs.path }}/validator_output.txt"
+          capture_file="capture.json"
+          validator_log="validator_output.txt"
           
-          if [ "${{ inputs.platform }}" = "SBSA" ]; then
+          if [ "${{ matrix.platform }}" = "SBSA" ]; then
             chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64
             ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64 -f "$capture_file" 2>&1 | tee "$validator_log"
-          elif [ "${{ inputs.platform }}" = "Q35" ]; then
+          elif [ "${{ matrix.platform }}" = "Q35" ]; then
             ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86_64.exe -f "$capture_file" 2>&1 | tee "$validator_log"
           fi
 
-      # Optional: Move the run logs to the temporary directory if it was created
-      - name: Move run log
-        if: ${{ always() && steps.tempdir.outputs.path }}
-        shell: bash
-        env:
-          TEMP_DIR: ${{ steps.tempdir.outputs.path }}
-        run: |
-          shopt -s globstar nullglob
-          files=(**/BUILDLOG_QemuQ35Pkg_Run.txt **/BUILDLOG_QemuSbsaPkg_Run.txt)
-
-          if ((${#files[@]})); then
-            echo "Moving ${#files[@]} log files"
-            mv "${files[@]}" "$TEMP_DIR"
-          else
-            echo "No matching log files found"
-          fi
-
-      # Optional: Publish the logs as an artifact if the temporary directory was created
+      # Publish the logs as an artifact
       - name: Publish Logs
-        if: ${{ always() && steps.tempdir.outputs.path }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           # Specify architecture if it is not empty
-          name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.platform && format('{0}-', inputs.platform) || '' }}${{ github.run_id }}
-          path: ${{ steps.tempdir.outputs.path }}
-          
+          name: readiness-logs-${{ matrix.tool-chain }}-${{ matrix.platform && format('{0}-', matrix.platform) || '' }}${{ github.run_id }}
+          path: |
+            ${{ steps.build-platform.outputs.log-path }}
+            capture.json
+            validator_output.txt
+
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.
   finalize:
