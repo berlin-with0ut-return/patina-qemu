@@ -27,7 +27,9 @@ jobs:
   # Builds the platform(s) in this repository as defined by the matrix.
   build:
     name: Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain }}
+
     needs: vars
+    
     runs-on: ${{ matrix.os }}
 
     # If matrix.container is not defined, then `image` will be null and no container will be used.
@@ -45,7 +47,6 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
-            readiness: true
           - config: 'Platforms/QemuQ35Pkg/PlatformBuild.py'
             target: 'RELEASE'
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
@@ -94,7 +95,6 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
-            readiness: true
             container: ${{ needs.vars.outputs.container-image }}
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'RELEASE'
@@ -166,7 +166,7 @@ jobs:
 
   # Runs the readiness tool.
   readiness: 
-    name: Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain }}
+    name: Readiness ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain }}
     needs: vars
     runs-on: ${{ matrix.os }}
     container:
