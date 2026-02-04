@@ -230,17 +230,17 @@ jobs:
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
 
       # Run readiness tool (timeout expected - QEMU runs in dead loop until capture completes)
+      # Using shell timeout so exit code 124 is not treated as failure
       - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}}
-        timeout-minutes: 2
-        continue-on-error: true
-        uses: ./.github/actions/build-platform
-        with:
-          command: 'flash'
-          platform-config: ${{ matrix.config }}
-          platform-name: ${{ matrix.platform }}
-          target: ${{ matrix.target }}
-          tool-chain: ${{ matrix.tool-chain }}
-          stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} BLD_*_DXE_CORE_BINARY_OVERRIDE=${{ matrix.readiness }}'
+        shell: bash
+        run: |
+          timeout 120s stuart_build -c ${{ matrix.config }} --FlashOnly \
+            TARGET=${{ matrix.target }} \
+            TOOL_CHAIN_TAG=${{ matrix.tool-chain }} \
+            QEMU_HEADLESS=TRUE \
+            EMPTY_DRIVE=TRUE \
+            BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }} \
+            || [ $? -eq 124 ]
 
       # Extract json from build output
       - name: Extract JSON block from logfile
