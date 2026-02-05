@@ -181,14 +181,14 @@ jobs:
             tool-chain: ${{ needs.vars.outputs.windows-toolchain }}
             platform: 'Q35'
             os: 'windows-latest'
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/x86_64/qemu_dxe_readiness_capture.efi'
+            readiness: '${DXE_READINESS_TOOL_PATH}/capture/x86_64/qemu_dxe_readiness_capture.efi'
           - config: 'Platforms/QemuSbsaPkg/PlatformBuild.py'
             target: 'DEBUG'
             tool-chain:  ${{ needs.vars.outputs.linux-toolchain }}
             platform: 'SBSA'
             os: 'ubuntu-latest'
             container: ${{ needs.vars.outputs.container-image }}
-            readiness: 'QemuPkg/Binaries/READINESS.QEMU_extdep/capture/aarch64/qemu_dxe_readiness_capture.efi'
+            readiness: '${DXE_READINESS_TOOL_PATH}/capture/aarch64/qemu_dxe_readiness_capture.efi'
 
     steps:
       # Checkout the repository to the runner or container
@@ -272,10 +272,10 @@ jobs:
           validator_log="validator_output.txt"
           
           if [ "${{ matrix.platform }}" = "SBSA" ]; then
-            chmod +x QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64
-            ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/linux/dxe_readiness_validator_x86_64 -f "$capture_file" 2>&1 | tee "$validator_log"
+            chmod +x "${DXE_READINESS_TOOL_PATH}/validator/linux/dxe_readiness_validator_x86_64"
+            "${DXE_READINESS_TOOL_PATH}/validator/linux/dxe_readiness_validator_x86_64" -f "$capture_file" 2>&1 | tee "$validator_log"
           elif [ "${{ matrix.platform }}" = "Q35" ]; then
-            ./QemuPkg/Binaries/READINESS.QEMU_extdep/validator/windows/dxe_readiness_validator_x86_64.exe -f "$capture_file" 2>&1 | tee "$validator_log"
+            "${DXE_READINESS_TOOL_PATH}/validator/windows/dxe_readiness_validator_x86_64.exe" -f "$capture_file" 2>&1 | tee "$validator_log"
           fi
 
       # Publish the logs as an artifact
