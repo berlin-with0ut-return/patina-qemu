@@ -268,19 +268,21 @@ jobs:
             validator_output.txt
 
       - name: 📁 Save PR Metadata and Report
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           mkdir -p pr-data
           echo "${{ github.event.pull_request.number }}" > pr-data/pr_number.txt
           echo "${{ github.base_ref }}" > pr-data/base_ref.txt
           echo "${{ github.head_ref }}" > pr-data/head_ref.txt
-          cp "$GITHUB_WORKSPACE/validator_output.txt" pr-data/
+          cp validator_output.txt pr-data/validator_output_${{ matrix.platform }}.txt
 
       # Upload readiness report data for use in PR comment
       - name: Upload PR Data and Report
-        uses: actions/upload-artifact@v6
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
         with:
-          name: readiness-report-data
+          name: readiness-report-data-${{ matrix.platform }}
           path: pr-data/
           retention-days: 1
 
