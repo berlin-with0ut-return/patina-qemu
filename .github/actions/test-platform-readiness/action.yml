@@ -134,7 +134,7 @@ runs:
   # Optional: Publish the logs as an artifact if the temporary directory was created
   - name: Publish Logs
     if: ${{ always() && steps.tempdir.outputs.path }}
-    uses: actions/upload-artifact@v4
+    uses: actions/upload-artifact@v6
     with:
       # Specify architecture if it is not empty
       name: readiness-logs-${{ inputs.tool-chain }}-${{ inputs.platform && format('{0}-', inputs.platform) || '' }}${{ github.run_id }}
