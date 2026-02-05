@@ -293,6 +293,14 @@ jobs:
             capture.json
             validator_output.txt
 
+      # Upload readiness report data for use in PR comment
+      - name: Upload PR Data and Report
+        uses: actions/upload-artifact@v6
+        with:
+          name: readiness-report-data
+          path: pr-data/
+          retention-days: 1
+
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.
   finalize:
