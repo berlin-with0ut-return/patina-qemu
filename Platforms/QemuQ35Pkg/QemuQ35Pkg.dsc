@@ -15,6 +15,20 @@
 #
 ################################################################################
 [Defines]
+  PLATFORM_NAME                  = QemuQ35
+  PLATFORM_GUID                  = 9EE23FF6-5170-4BFF-A786-390F606F3404
+  PLATFORM_VERSION               = 0.1
+  DSC_SPECIFICATION              = 0x00010005
+  OUTPUT_DIRECTORY               = Build/QemuQ35Pkg
+  SUPPORTED_ARCHITECTURES        = X64
+  PEI_CRYPTO_ARCH                = X64
+
+################################################################################
+#
+# Defines Section - statements that will be processed to create a Makefile.
+#
+################################################################################
+[Defines]
   BUILD_TARGETS                  = NOOPT|DEBUG|RELEASE
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = QemuQ35Pkg/QemuQ35Pkg.fdf
@@ -817,8 +831,6 @@
   #gUefiTempTokenSpaceGuid.Pcd8259LegacyModeEdgeLevel|0x0E20
   gUefiQemuQ35PkgTokenSpaceGuid.Pcd8259LegacyModeEdgeLevel|0x0E20
 
-  gMsGraphicsPkgTokenSpaceGuid.PcdMsGopOverrideProtocolGuid|{0xF5, 0x3B, 0x5E, 0xAA, 0x8A, 0x81, 0x2D, 0x41, 0xA1, 0x8E, 0xD8, 0x79, 0x3B, 0xA0, 0x3A, 0x5C}
-
   # QEMU does not support SMRR, adding the PCD override to skip corresponding audit tests
   !if $(BUILD_UNIT_TESTS) == TRUE
     gUefiTestingPkgTokenSpaceGuid.PcdPlatformSmrrUnsupported|TRUE
@@ -1422,3 +1434,143 @@ QemuQ35Pkg/Library/ResetSystemLib/StandaloneMmResetSystemLib.inf
   }
 
 !include TpmTestingPkg/TpmReplay.dsc.inc
+
+[Components.X64]
+QemuQ35Pkg/ResetVector/ResetVector.inf
+
+  #########################################
+  # SEC Phase modules
+  #########################################
+  QemuQ35Pkg/Sec/SecMain.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+  }
+
+  #########################################
+  # PEI Phase modules
+  #########################################
+  MdeModulePkg/Core/Pei/PeiMain.inf
+  MdeModulePkg/Universal/PCD/Pei/Pcd.inf  {
+    <LibraryClasses>
+      PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
+  }
+  MdeModulePkg/Universal/ReportStatusCodeRouter/Pei/ReportStatusCodeRouterPei.inf {
+    <LibraryClasses>
+      PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
+  }
+  MdeModulePkg/Universal/StatusCodeHandler/Pei/StatusCodeHandlerPei.inf {
+    <LibraryClasses>
+      PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
+  }
+  MdeModulePkg/Core/DxeIplPeim/DxeIpl.inf
+
+!if $(TPM_REPLAY_ENABLED) == TRUE
+  TpmTestingPkg/TpmReplayPei/Pei/TpmReplayPei.inf {
+    <LibraryClasses>
+      FvMeasurementExclusionLib|QemuQ35Pkg/Library/PeiFvMeasurementExclusionLib/PeiFvMeasurementExclusionLib.inf
+      InputChannelLib|QemuPkg/Library/BaseFwCfgInputChannelLib/BaseFwCfgInputChannelLib.inf
+      Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibDTpm/Tpm2DeviceLibDTpm.inf
+    <PcdsPatchableInModule>
+      gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x3F
+    <PcdsFixedAtBuild>
+      gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80480246
+  }
+!endif
+
+  SecurityPkg/RandomNumberGenerator/RngPei/RngPei.inf {
+    <LibraryClasses>
+      RngLib|MdeModulePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
+  }
+
+  QemuQ35Pkg/PlatformPei/PlatformPei.inf {
+    <LibraryClasses>
+      NULL|StandaloneMmPkg/Library/PeiStandaloneMmHobProductionLib/PeiStandaloneMmHobProductionLib.inf
+  }
+  MdeModulePkg/Universal/FaultTolerantWritePei/FaultTolerantWritePei.inf
+  MdeModulePkg/Universal/Variable/Pei/VariablePei.inf
+  QemuQ35Pkg/SmmAccess/SmmAccessPei.inf
+  MmSupervisorPkg/Drivers/MmCommunicationBuffer/MmCommunicationBufferPei.inf
+!if $(PEI_MM_IPL_ENABLED) == TRUE
+  MmSupervisorPkg/Drivers/MmPeiLaunchers/MmIplPei.inf
+  QemuQ35Pkg/SmmControl2Dxe/MmControlPei.inf
+!endif
+
+  UefiCpuPkg/CpuMpPei/CpuMpPei.inf
+
+!if $(TPM_ENABLE) == TRUE
+  QemuPkg/Tcg/Tcg2Config/Tcg2ConfigPei.inf
+  SecurityPkg/Tcg/Tcg2Pei/Tcg2Pei.inf {
+    <LibraryClasses>
+      HashLib|SecurityPkg/Library/HashLibBaseCryptoRouter/HashLibBaseCryptoRouterPei.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha1/HashInstanceLibSha1.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha256/HashInstanceLibSha256.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha384/HashInstanceLibSha384.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSha512/HashInstanceLibSha512.inf
+      NULL|SecurityPkg/Library/HashInstanceLibSm3/HashInstanceLibSm3.inf
+  }
+!endif
+
+  #
+  # MU Modules
+  #
+  ## PEI
+  MdeModulePkg/Universal/ResetSystemPei/ResetSystemPei.inf
+  MsCorePkg/Universal/StatusCodeHandler/Serial/Pei/SerialStatusCodeHandlerPei.inf {
+    <LibraryClasses>
+      DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  }
+
+  MsCorePkg/Core/GuidedSectionExtractPeim/GuidedSectionExtract.inf {
+    <LibraryClasses>
+    NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+  }
+  MsWheaPkg/MsWheaReport/Pei/MsWheaReportPei.inf
+
+  MsGraphicsPkg/MsUiTheme/Pei/MsUiThemePpi.inf
+  MsGraphicsPkg/MsEarlyGraphics/Pei/MsEarlyGraphics.inf
+  MdeModulePkg/Universal/Acpi/FirmwarePerformanceDataTablePei/FirmwarePerformancePei.inf
+  OemPkg/DeviceStatePei/DeviceStatePei.inf
+  MfciPkg/MfciPei/MfciPei.inf
+
+  PolicyServicePkg/PolicyService/Pei/PolicyPei.inf
+  QemuQ35Pkg/ConfigKnobs/ConfigKnobs.inf
+  OemPkg/OemConfigPolicyCreatorPei/OemConfigPolicyCreatorPei.inf {
+    <LibraryClasses>
+      # producer of config data
+      NULL|QemuQ35Pkg/Library/Q35ConfigDataLib/Q35ConfigDataLib.inf
+  }
+
+  DebuggerFeaturePkg/DebugConfigPei/DebugConfigPei.inf
+
+################################################################################
+#
+# Build Options
+#
+################################################################################
+[BuildOptions]
+  !if $(PERF_TRACE_ENABLE) == TRUE
+    DEFINE PERFORMANCE_OPTIONS = -DPERF_TRACE_ENABLE=1
+  !else
+    DEFINE PERFORMANCE_OPTIONS =
+  !endif
+
+  # Exception tables are required for stack walks in the debugger.
+  MSFT:*_*_X64_GENFW_FLAGS  = --keepexceptiontable
+  GCC:*_*_X64_GENFW_FLAGS   = --keepexceptiontable
+
+  #
+  # Disable deprecated APIs.
+  #
+  MSFT:*_*_*_CC_FLAGS = /D DISABLE_NEW_DEPRECATED_INTERFACES $(PERFORMANCE_OPTIONS)
+  GCC:*_*_*_CC_FLAGS = -D DISABLE_NEW_DEPRECATED_INTERFACES $(PERFORMANCE_OPTIONS)
+
+  MSFT:*_*_*_DLINK_FLAGS = /ALIGN:64
+  GCC:*_GCC5_*_DLINK_FLAGS = -z common-page-size=64
+  GCC:*_CLANGPDB_*_DLINK_FLAGS = /ALIGN:64 /FILEALIGN:64
+
+# Force PE/COFF sections to be aligned at 4KB boundaries to support page level
+# protection of DXE_SMM_DRIVER/SMM_CORE modules
+[BuildOptions.common.EDKII.DXE_SMM_DRIVER, BuildOptions.common.EDKII.DXE_RUNTIME_DRIVER, BuildOptions.common.EDKII.SMM_CORE, BuildOptions.common.EDKII.DXE_DRIVER, BuildOptions.common.EDKII.DXE_CORE, BuildOptions.common.EDKII.UEFI_DRIVER, BuildOptions.common.EDKII.UEFI_APPLICATION, BuildOptions.common.EDKII.MM_CORE_STANDALONE, BuildOptions.common.EDKII.MM_STANDALONE]
+  MSFT:*_*_*_DLINK_FLAGS = /ALIGN:4096
+  GCC:*_GCC5_*_DLINK_FLAGS = -z common-page-size=0x1000
+  GCC:*_CLANGPDB_*_DLINK_FLAGS = /ALIGN:4096

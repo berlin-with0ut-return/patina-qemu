@@ -45,7 +45,7 @@ class CommonPlatform():
         for the different parts of stuart
     '''
     PackagesSupported = ("QemuQ35Pkg",)
-    ArchSupported = ("IA32", "X64")
+    ArchSupported = ("X64",)
     TargetsSupported = ("DEBUG", "RELEASE", "NOOPT")
     Scopes = ('qemu', 'qemuq35', 'edk2-build', 'cibuild', 'configdata')
     PackagesPath = (
@@ -67,15 +67,7 @@ class CommonPlatform():
 
         ArchCsv: csv string containing all architectures to build
         '''
-        dsc = "QemuQ35Pkg"
-        if "IA32" in ArchCsv.upper():
-            dsc += "IA32"
-
-        if "X64" in ArchCsv.upper():
-            dsc += "X64"
-
-        dsc += ".dsc"
-        return dsc
+        return "QemuQ35Pkg.dsc"
 
     @staticmethod
     def add_common_command_line_options(parserObj) -> None:
@@ -228,10 +220,11 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         parserObj.add_argument('-t', '--target', dest='target', type=str, default = None,
                                help="Optional - A second way to set the target, to support common CI builds.")
 
+        # Although Q35 in this repo only supports X64, the argument is retained to allow common
+        # build scripts to specify the architecture.
         parserObj.add_argument('-a', "--arch", dest="build_arch", type=str, default="X64",
             help="Optional - CSV of architecture to build. "
-            "X64 will use X64 for both PEI and DXE.  IA32,X64 will use IA32 for PEI and "
-            "X64 for DXE. Default is X64")
+            "Only X64 is supported.")
         CommonPlatform.add_common_command_line_options(parserObj)
 
     def RetrieveCommandLineOptions(self, args):

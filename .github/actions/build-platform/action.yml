@@ -28,7 +28,7 @@ inputs:
     required: false
     default: 'VS2022'
   architecture:
-    description: 'Target architecture (e.g., X64; IA32,X64; ARM64). By default, uses the architectures defined in the platform config.'
+    description: 'Target architecture (e.g., X64; ARM64). By default, uses the architectures defined in the platform config.'
     required: false
     default: ''
   stuart-args:
@@ -84,7 +84,7 @@ runs:
     run: |
       HASH=$(git submodule foreach --quiet 'echo $sha1' | sha256sum | awk '{print $1}')
       echo "hash=$HASH" >> $GITHUB_OUTPUT
-  
+
   # Use the cache key to attempt to restore cached submodules
   - name: Cache submodules
     if: ${{ inputs.command == 'all' || inputs.command == 'build' }}
@@ -99,7 +99,7 @@ runs:
     shell: bash
     run: |
       stuart_setup -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
-  
+
   - name: Move setup log
     if: always()
     shell: bash
@@ -122,7 +122,7 @@ runs:
     shell: bash
     run: |
       stuart_update -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }}
-  
+
   - name: Move update log
     if: always()
     shell: bash
@@ -138,7 +138,7 @@ runs:
       else
         echo "No matching log files found"
       fi
-  
+
   # Build the platform, specify architecture if it is not empty
   - name: Build platform (stuart_build)
     if: ${{ inputs.command == 'all' || inputs.command == 'build' }}
@@ -146,7 +146,7 @@ runs:
     run: |
       stuart_build -c ${{ inputs.platform-config }} ${{ steps.stuart.outputs.arguments }} \
       $([[ -n "${{ inputs.architecture }}" ]] && echo " -a ${{ inputs.architecture }}")
-  
+
   - name: Move build log
     if: always()
     shell: bash
@@ -162,7 +162,7 @@ runs:
       else
         echo "No matching log files found"
       fi
-  
+
   - name: Flash platform (stuart_build --FLASHONLY)
     if: ${{ inputs.command == 'all' || inputs.command == 'flash' }}
     shell: bash

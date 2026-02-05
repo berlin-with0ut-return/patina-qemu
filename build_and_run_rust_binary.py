@@ -191,7 +191,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
             code_fd = (
                 SCRIPT_DIR
                 / "Build"
-                / "QemuQ35PkgX64"
+                / "QemuQ35Pkg"
                 / f"{args.build_target.upper()}_{args.toolchain.upper()}"
                 / "FV"
                 / "QEMUQ35_CODE.fd"

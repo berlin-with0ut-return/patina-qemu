@@ -8,7 +8,7 @@ from collections import namedtuple
 from edk2toolext.invocables.edk2_platform_build import BuildSettingsManager
 from edk2toolext.environment.uefi_build import UefiBuilder
 from edk2toollib.utility_functions import RunCmd
-from edk2toolext.edk2_logging import SECTION, SUB_SECTION 
+from edk2toolext.edk2_logging import SECTION, SUB_SECTION
 from edk2toollib.uefi.edk2.parsers.dsc_parser import DscParser
 from edk2toollib.database import Edk2DB, Environment, Inf, Source, InstancedInf
 from sqlalchemy import func, not_
@@ -25,7 +25,7 @@ import PlatformBuild  # noqa: E402
 
 PLATFORM_NAME = 'QemuQ35Pkg'
 PLATFORM_TEST_DSC = 'QemuQ35Pkg/Test/QemuQ35PkgHostTest.dsc'
-PLATFORM_DSC = 'QemuQ35Pkg/QemuQ35PkgX64.dsc'
+PLATFORM_DSC = 'QemuQ35Pkg/QemuQ35Pkg.dsc'
 PLATFORMBUILD_DIR = str(Path(__file__).parent.parent)
 
 
