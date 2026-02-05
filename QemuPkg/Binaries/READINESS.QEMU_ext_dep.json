@@ -8,7 +8,7 @@
     "internal_path": "/",
     "compression_type": "zip",
     "flags": [
-        "set_shell_var"
+        "set_build_var"
     ],
     "var_name": "DXE_READINESS_TOOL_PATH"
 }
