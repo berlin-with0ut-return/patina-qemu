@@ -12,7 +12,6 @@
 name: PR Comments
 
 on:
-  workflow_dispatch:
   workflow_run:
     workflows: ["Platform CI"]
     types:
@@ -23,7 +22,6 @@ jobs:
     name: Post PR Comment
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success')
 
@@ -33,14 +31,14 @@ jobs:
         with:
           name: readiness-report-data-Q35
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 21736547557
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Download SBSA Readiness Report Data
         uses: actions/download-artifact@v4
         with:
           name: readiness-report-data-SBSA
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 21736547557
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: 📖 Read PR Metadata
         id: pr-data
@@ -50,16 +48,13 @@ jobs:
           echo "base_ref=$(cat base_ref.txt)" >> $GITHUB_OUTPUT
           echo "head_ref=$(cat head_ref.txt)" >> $GITHUB_OUTPUT
 
-      # - name: Generate Token
-      #   id: app-token
-      #   uses: actions/create-github-app-token@v2
-      #   with:
-      #     app-id: ${{ secrets.PATINA_AUTOMATION_APPLICATION_ID }}
-      #     private-key: ${{ secrets.PATINA_AUTOMATION_APPLICATION_PRIVATE_KEY }}
-      #     owner: ${{ github.repository_owner }}
-
-      - name: Set GITHUB_TOKEN for testing
-        run: echo "TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+      - name: Generate Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.PATINA_AUTOMATION_APPLICATION_ID }}
+          private-key: ${{ secrets.PATINA_AUTOMATION_APPLICATION_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Post Readiness Report as PR Comment
         env:
