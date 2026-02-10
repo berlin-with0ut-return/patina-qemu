@@ -275,7 +275,6 @@ jobs:
             validator_output.txt
 
       - name: 📁 Save PR Metadata and Report
-        if: github.event_name == 'pull_request' && always()
         shell: bash
         run: |
           mkdir -p pr-data
@@ -287,7 +286,6 @@ jobs:
 
       # Upload readiness report data for use in PR comment
       - name: Upload PR Data and Report
-        if: github.event_name == 'pull_request' && always()
         uses: actions/upload-artifact@v4
         with:
           name: readiness-report-data-${{ matrix.platform }}
