@@ -50,13 +50,8 @@ jobs:
           echo "base_ref=$(cat base_ref.txt)" >> $GITHUB_OUTPUT
           echo "head_ref=$(cat head_ref.txt)" >> $GITHUB_OUTPUT
 
-      - name: Generate Token
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.PATINA_AUTOMATION_APPLICATION_ID }}
-          private-key: ${{ secrets.PATINA_AUTOMATION_APPLICATION_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+      - name: Set GITHUB_TOKEN for testing
+        run: echo "TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
       - name: Check for Failures and Post Readiness Report as PR Comment
         env:
