@@ -33,20 +33,20 @@ jobs:
         with:
           name: readiness-report-data-Q35
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 21853093758
+          run-id: 21880600930
 
       - name: Download SBSA Readiness Report Data
         uses: actions/download-artifact@v4
         with:
           name: readiness-report-data-SBSA
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 21853093758
+          run-id: 21880600930
 
       - name: 📖 Read PR Metadata
         id: pr-data
         shell: bash
         run: |
-          echo "pr_number=$(cat pr_number.txt)" >> $GITHUB_OUTPUT
+          echo "pr_number=2" >> $GITHUB_OUTPUT
           echo "base_ref=$(cat base_ref.txt)" >> $GITHUB_OUTPUT
           echo "head_ref=$(cat head_ref.txt)" >> $GITHUB_OUTPUT
 
@@ -79,7 +79,7 @@ jobs:
           echo "## SBSA Readiness Report" >> combined_report.txt
           cat validator_output_SBSA.txt >> combined_report.txt
           
-          COMMENT_BODY=$(cat combined_report.txt)
+          COMMENT_BODY="test update"
           
           # Check for existing comment with our marker and update it, or create new
           EXISTING_COMMENT_ID=$(gh api \

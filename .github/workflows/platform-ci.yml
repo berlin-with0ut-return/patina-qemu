@@ -257,7 +257,7 @@ jobs:
           fi
           
           # Save exit code for use in PR comment workflow
-          echo "$exit_code" > validator_exit_code.txt
+          echo "2" > validator_exit_code.txt
           
           # Exit with the original exit code (allows workflow to continue but tracks failure)
           exit $exit_code
