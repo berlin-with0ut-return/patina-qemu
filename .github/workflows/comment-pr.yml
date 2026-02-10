@@ -12,6 +12,7 @@
 name: PR Comments
 
 on:
+  workflow_dispatch: 
   workflow_run:
     workflows: ["Platform CI"]
     types:
@@ -22,6 +23,7 @@ jobs:
     name: Post PR Comment
     runs-on: ubuntu-latest
     if: >
+      github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success')
 
@@ -31,14 +33,14 @@ jobs:
         with:
           name: readiness-report-data-Q35
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: 21848570288
 
       - name: Download SBSA Readiness Report Data
         uses: actions/download-artifact@v4
         with:
           name: readiness-report-data-SBSA
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: 21848570288
 
       - name: 📖 Read PR Metadata
         id: pr-data
