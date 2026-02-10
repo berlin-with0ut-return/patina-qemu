@@ -265,7 +265,7 @@ jobs:
       # Publish the logs as an artifact
       - name: Publish Logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           # Specify architecture if it is not empty
           name: readiness-logs-${{ matrix.tool-chain }}-${{ matrix.platform && format('{0}-', matrix.platform) || '' }}${{ github.run_id }}
