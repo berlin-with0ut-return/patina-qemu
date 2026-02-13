@@ -9,6 +9,9 @@ name: "Platform CI"
 
 on:
   workflow_dispatch:
+  release:
+    types:
+      - published
   push:
     branches:
       - main
@@ -108,7 +111,7 @@ jobs:
         run: pip install -r pip-requirements.txt
 
       # Run the build-platform action, which calls stuart_setup, stuart_update, and stuart_build
-      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      - name: Prepare and Build ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}}
         id: build-platform
         uses: ./.github/actions/build-platform
         with:
@@ -117,11 +120,9 @@ jobs:
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
           tool-chain: ${{ matrix.tool-chain }}
-          # Only pass architecture if it is defined in the matrix
-          architecture: ${{ matrix.architecture || '' }}
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE FILE_REGEX=*TestApp*.efi RUN_TESTS=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
 
-      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}} ${{ matrix.architecture || '' }}
+      - name: Run ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain}}
         uses: ./.github/actions/build-platform
         with:
           command: 'flash'
@@ -129,20 +130,37 @@ jobs:
           platform-name: ${{ matrix.platform }}
           target: ${{ matrix.target }}
           tool-chain: ${{ matrix.tool-chain }}
-          # Only pass architecture if it is defined in the matrix
-          architecture: ${{ matrix.architecture || '' }}
           stuart-args: 'SHUTDOWN_AFTER_RUN=TRUE FILE_REGEX=*TestApp*.efi RUN_TESTS=TRUE QEMU_HEADLESS=TRUE BLD_*_QEMU_CORE_NUM=${{ needs.vars.outputs.qemu-core-count }}'
 
       - name: Publish Logs
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          # Specify architecture if it is not empty
-          name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}${{ matrix.architecture && format('-{0}', matrix.architecture) || '' }}
+          name: build-logs-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}
           path: ${{ steps.build-platform.outputs.log-path }}
 
+      - name: Publish Q35 release binaries
+        if: ${{ github.event_name == 'release' && matrix.platform == 'Q35' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-bin-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}
+          path: |
+            Build/**/FV/QEMUQ35_CODE.fd
+            Build/**/FV/QEMUQ35_VARS.fd
+          if-no-files-found: error
+
+      - name: Publish SBSA release binaries
+        if: ${{ github.event_name == 'release' && matrix.platform == 'SBSA' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-bin-${{ matrix.platform }}-${{ matrix.target }}-${{ matrix.tool-chain }}
+          path: |
+            Build/**/FV/QEMU_EFI.fd
+            Build/**/FV/SECURE_FLASH0.fd
+          if-no-files-found: error
+
   # Runs the readiness tool.
-  readiness: 
+  readiness:
     name: Readiness ${{ matrix.platform }} ${{ matrix.target }} ${{ matrix.tool-chain }}
     needs: vars
     runs-on: ${{ matrix.os }}
@@ -189,7 +207,7 @@ jobs:
           python-version: ${{ needs.vars.outputs.python-version }}
           cache: 'pip'
           cache-dependency-path: 'pip-requirements.txt'
-      
+
       # Install the pip dependencies needed to run stuart for the platform(s)
       - name: Install dependencies
         run: pip install -r pip-requirements.txt
@@ -233,7 +251,7 @@ jobs:
 
           # Skip log lines and extract JSON content (from first { to last })
           sed -n '/^INFO - INFO - {$/,/^INFO - }$/{s/^INFO - //; s/^INFO - //; p}' "$logfile" > "$capture_file"
-          
+
           # Verify JSON was extracted
           if [ -s "$capture_file" ] && grep -q '{' "$capture_file" && grep -q '}' "$capture_file"; then
             echo "Filtered JSON written to $capture_file"
@@ -293,6 +311,14 @@ jobs:
           name: readiness-report-data-${{ matrix.platform }}
           path: pr-data/
           retention-days: 1
+          
+  publish-release-assets:
+    needs: build
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      release-tag: ${{ github.event.release.tag_name }}
+    secrets: inherit
 
   # A final job to indicate that all builds are complete. This allows the github required checks to
   # be targeted at a single job, instead of all the jobs in the matrix, which may change over time.

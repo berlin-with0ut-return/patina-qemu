@@ -1,0 +1,95 @@
+# Workflow that publishes release assets to GitHub releases in patina-qemu.
+#
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
+name: Publish Release Assets
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Release tag name to upload assets to.
+        required: true
+        type: string
+
+jobs:
+  publish-release-assets:
+    name: Publish Release Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate Token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.PATINA_AUTOMATION_APPLICATION_ID }}
+          private-key: ${{ secrets.PATINA_AUTOMATION_APPLICATION_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: ${{ runner.temp }}/release-artifacts
+
+      - name: Stage the zip contents
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil
+
+          artifacts_root = Path(r"${{ runner.temp }}/release-artifacts")
+          staging_root = Path(r"${{ runner.temp }}/release-staging")
+          q35_stage = staging_root / "Q35"
+          sbsa_stage = staging_root / "SBSA"
+
+          q35_stage.mkdir(parents=True, exist_ok=True)
+          sbsa_stage.mkdir(parents=True, exist_ok=True)
+
+          for artifact_dir in artifacts_root.glob("release-bin-*"):
+            name = artifact_dir.name
+
+            if name.startswith("release-bin-Q35-"):
+              variant = name.removeprefix("release-bin-Q35-")
+              destination = q35_stage / variant
+            elif name.startswith("release-bin-SBSA-"):
+              variant = name.removeprefix("release-bin-SBSA-")
+              destination = sbsa_stage / variant
+            else:
+              continue
+
+            destination.mkdir(parents=True, exist_ok=True)
+
+            for firmware_file in artifact_dir.rglob("*.fd"):
+              shutil.copy2(firmware_file, destination / firmware_file.name)
+
+      - name: Create the zip files
+        shell: python
+        run: |
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          staging_root = Path(r"${{ runner.temp }}/release-staging")
+          assets_root = Path(r"${{ runner.temp }}/release-assets")
+          tag_name = r"${{ inputs.release-tag }}"
+
+          assets_root.mkdir(parents=True, exist_ok=True)
+
+          def create_zip(source_dir: Path, destination_zip: Path) -> None:
+            with ZipFile(destination_zip, mode="w", compression=ZIP_DEFLATED) as archive:
+              for item in source_dir.rglob("*"):
+                if item.is_file():
+                  archive.write(item, arcname=item.relative_to(staging_root))
+
+          create_zip(staging_root / "Q35", assets_root / f"patina-qemu-q35-{tag_name}.zip")
+          create_zip(staging_root / "SBSA", assets_root / f"patina-qemu-sbsa-{tag_name}.zip")
+
+      - name: Upload zip files to the release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "${{ inputs.release-tag }}" "${{ runner.temp }}/release-assets/patina-qemu-q35-${{ inputs.release-tag }}.zip" --clobber --repo "${GH_REPO}"
+          gh release upload "${{ inputs.release-tag }}" "${{ runner.temp }}/release-assets/patina-qemu-sbsa-${{ inputs.release-tag }}.zip" --clobber --repo "${GH_REPO}"
