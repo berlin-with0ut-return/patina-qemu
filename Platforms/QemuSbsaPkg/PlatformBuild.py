@@ -56,7 +56,7 @@ class CommonPlatform():
         "MU_BASECORE",
         "Common/MU",
         "Common/MU_TIANO",
-        "Common/MU_OEM_SAMPLE",
+        # "Common/MU_OEM_SAMPLE",
         "Common/PATINA_EDK2",
         "Silicon/Arm/MU_TIANO",
         "Silicon/Arm/TFA",
@@ -119,7 +119,7 @@ class SettingsManager(UpdateSettingsManager, SetupSettingsManager, PrEvalSetting
             RequiredSubmodule("MU_BASECORE", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Common/MU", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Common/MU_TIANO", False, ".pytool/CISettings.py"),
-            RequiredSubmodule("Common/MU_OEM_SAMPLE", False, ".pytool/CISettings.py"),
+            # RequiredSubmodule("Common/MU_OEM_SAMPLE", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Common/PATINA_EDK2", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Silicon/Arm/MU_TIANO", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Silicon/Arm/TFA", True),
@@ -1064,4 +1064,3 @@ if __name__ == "__main__":
     else:
         print("Running stuart_build -c " + SCRIPT_PATH)
         Edk2PlatformBuild().Invoke()
-
