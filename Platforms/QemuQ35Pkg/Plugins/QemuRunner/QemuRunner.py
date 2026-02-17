@@ -80,8 +80,6 @@ class QemuRunner(uefi_helper_plugin.IUefiHelperPlugin):
         boot_to_front_page = QemuRunner.GetBool(env, "BOOT_TO_FRONT_PAGE", False)
         core_count = QemuRunner.GetBuildStr(env, "QEMU_CORE_NUM")
         cpu_model = QemuRunner.GetStr(env, "CPU_MODEL")
-        dfci_files = QemuRunner.GetStr(env, "DFCI_FILES")
-        dfci_var_store = QemuRunner.GetStr(env, "DFCI_VAR_STORE")
         enable_network = QemuRunner.GetBool(env, "ENABLE_NETWORK", False)
         executable = QemuRunner.GetStr(env, "QEMU_PATH")
         gdb_server_port = QemuRunner.GetStr(env, "GDB_SERVER")
@@ -96,12 +94,11 @@ class QemuRunner(uefi_helper_plugin.IUefiHelperPlugin):
         qemu_executable_path = QemuRunner.GetStr(env, "QEMU_PATH")
         qemu_ext_dep_dir = QemuRunner.GetStr(env, "QEMU_DIR")
         serial_port = QemuRunner.GetStr(env, "SERIAL_PORT", "50001")
-        smm_enabled = QemuRunner.GetBuildBool(env, "SMM_ENABLED", True)
         tpm_dev = QemuRunner.GetStr(env, "TPM_DEV")
         virtual_drive = QemuRunner.GetStr(env, "VIRTUAL_DRIVE_PATH")
 
         code_fd = os.path.join(output_path, "FV", "QEMUQ35_CODE.fd")
-        orig_var_store = os.path.join(output_path, "FV", "QEMUQ35_VARS.fd")
+        var_store = os.path.join(output_path, "FV", "QEMUQ35_VARS.fd")
 
         # Use a provided QEMU path. Otherwise use what is provided through the extdep
         if not qemu_executable_path:
@@ -116,17 +113,7 @@ class QemuRunner(uefi_helper_plugin.IUefiHelperPlugin):
         if qemu_ext_dep_dir:
             rom_path = os.path.join(qemu_ext_dep_dir, "share")
 
-        if dfci_var_store is not None:
-            if not os.path.isfile(dfci_var_store):
-                shutil.copy(orig_var_store, dfci_var_store)
-            var_store = dfci_var_store
-        else:
-            var_store = orig_var_store
-
         forward_ports = None
-        if enable_network:
-            if dfci_var_store:
-                forward_ports = [8270, 8271]
 
         boot_selection = ""
         if boot_to_front_page:
@@ -141,13 +128,12 @@ class QemuRunner(uefi_helper_plugin.IUefiHelperPlugin):
         qemu_cmd_builder = (
             QemuCommandBuilder(qemu_executable_path, QemuArchitecture.Q35)
             .with_cpu(cpu_model, core_count)
-            .with_machine(smm_enabled, qemu_accelerator)
+            .with_machine(qemu_accelerator)
             .with_memory(8192 if path_to_os else 2048)
             .with_firmware(code_fd, var_store)
             .with_rom_path(rom_path)
             .with_usb_controller()
             .with_usb_mouse()
-            .with_usb_storage(dfci_files, "dfci_disk")
             .with_usb_storage(install_files, "install_disk")
             .with_storage(path_to_os, os_boot_device)
             .with_virtual_drive(None if path_to_os else virtual_drive)

@@ -47,7 +47,7 @@ class CommonPlatform():
     PackagesSupported = ("QemuQ35Pkg",)
     ArchSupported = ("X64",)
     TargetsSupported = ("DEBUG", "RELEASE", "NOOPT")
-    Scopes = ('qemu', 'qemuq35', 'edk2-build', 'cibuild', 'configdata')
+    Scopes = ('qemu', 'qemuq35', 'edk2-build', 'cibuild')
     PackagesPath = (
         "Platforms",
         "MU_BASECORE",
@@ -55,8 +55,6 @@ class CommonPlatform():
         "Common/MU_TIANO",
         "Common/MU_OEM_SAMPLE",
         "Common/PATINA_EDK2",
-        "Features/DFCI",
-        "Features/CONFIG",
         "Features/MM_SUPV"
     )
 
@@ -139,8 +137,6 @@ class SettingsManager(UpdateSettingsManager, SetupSettingsManager, PrEvalSetting
             RequiredSubmodule("Common/MU_TIANO", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Common/MU_OEM_SAMPLE", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Common/PATINA_EDK2", False, ".pytool/CISettings.py"),
-            RequiredSubmodule("Features/DFCI", False, ".pytool/CISettings.py"),
-            RequiredSubmodule("Features/CONFIG", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Features/MM_SUPV", False, ".pytool/CISettings.py"),
         ]
 
@@ -321,9 +317,6 @@ class PlatformBuilder(UefiBuilder, BuildSettingsManager):
         # Globally set CodeQL failures to be ignored in this repo.
         # Note: This has no impact if CodeQL is not active/enabled.
         self.env.SetValue("STUART_CODEQL_AUDIT_ONLY", "true", "Platform Defined")
-
-        # Enabled all of the SMM modules
-        self.env.SetValue("BLD_*_SMM_ENABLED", "TRUE", "Default")
 
         # Enable performance tracing.
         self.env.SetValue("BLD_*_PERF_TRACE_ENABLE", "FALSE", "Disable performance tracing by default.")
