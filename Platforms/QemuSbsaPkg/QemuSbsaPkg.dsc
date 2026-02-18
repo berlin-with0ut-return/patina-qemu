@@ -294,7 +294,7 @@
   # UI and graphics
   BmpSupportLib            |MdeModulePkg/Library/BaseBmpSupportLib/BaseBmpSupportLib.inf
   BootLogoLib              |MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
-  BootGraphicsProviderLib  |OemPkg/Library/BootGraphicsProviderLib/BootGraphicsProviderLib.inf #  uses PCDs and raw files in the firmware volumes to get Pcd
+  BootGraphicsProviderLib  |QemuPkg/Library/BootGraphicsProviderLibQemu/BootGraphicsProviderLib.inf #  uses PCDs and raw files in the firmware volumes to get Pcd
   CustomizedDisplayLib     |MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
   FrameBufferBltLib        |MdeModulePkg/Library/FrameBufferBltLib/FrameBufferBltLib.inf
   FrameBufferMemDrawLib    |MsGraphicsPkg/Library/FrameBufferMemDrawLib/FrameBufferMemDrawLibDxe.inf
@@ -988,7 +988,7 @@
 
   # Configuration modules
   PolicyServicePkg/PolicyService/DxeMm/PolicyDxe.inf
-  OemPkg/DeviceStateDxe/DeviceStateDxe.inf
+  QemuPkg/DeviceStateDxeQemu/DeviceStateDxe.inf
 
   AdvLoggerPkg/AdvancedFileLogger/AdvancedFileLogger.inf
 
