@@ -237,10 +237,8 @@ INF  MdeModulePkg/Core/DxeIplPeim/DxeIpl.inf
 INF  MdeModulePkg/Universal/FaultTolerantWritePei/FaultTolerantWritePei.inf
 INF  MdeModulePkg/Universal/Variable/Pei/VariablePei.inf
 
-!if $(SMM_ENABLED) == TRUE
 INF  QemuQ35Pkg/SmmAccess/SmmAccessPei.inf
 INF  MmSupervisorPkg/Drivers/MmCommunicationBuffer/MmCommunicationBufferPei.inf
-!endif
 
 INF  UefiCpuPkg/CpuMpPei/CpuMpPei.inf
 
@@ -256,7 +254,7 @@ INF  MdeModulePkg/Universal/ResetSystemPei/ResetSystemPei.inf
 INF  MsCorePkg/Universal/StatusCodeHandler/Serial/Pei/SerialStatusCodeHandlerPei.inf
 INF  MsCorePkg/Core/GuidedSectionExtractPeim/GuidedSectionExtract.inf
 INF  MsWheaPkg/MsWheaReport/Pei/MsWheaReportPei.inf
-INF  OemPkg/DeviceStatePei/DeviceStatePei.inf
+INF  QemuPkg/DeviceStatePeiQemu/DeviceStatePei.inf
 INF  MfciPkg/MfciPei/MfciPei.inf
 
 INF  MsGraphicsPkg/MsUiTheme/Pei/MsUiThemePpi.inf
@@ -264,8 +262,6 @@ INF  MsGraphicsPkg/MsEarlyGraphics/Pei/MsEarlyGraphics.inf
 INF  MdeModulePkg/Universal/Acpi/FirmwarePerformanceDataTablePei/FirmwarePerformancePei.inf
 
 INF  PolicyServicePkg/PolicyService/Pei/PolicyPei.inf
-INF  QemuQ35Pkg/ConfigKnobs/ConfigKnobs.inf
-INF  OemPkg/OemConfigPolicyCreatorPei/OemConfigPolicyCreatorPei.inf
 
 !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.PEI.inc.fdf
 
@@ -311,7 +307,6 @@ INF  MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
 
 INF  QemuQ35Pkg/8259InterruptControllerDxe/8259.inf
 INF  UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
-# INF  UefiCpuPkg/CpuDxe/CpuDxe.inf
 INF  PatinaPkg/MpDxe/MpDxe.inf
 INF  QemuQ35Pkg/8254TimerDxe/8254Timer.inf
 INF  QemuQ35Pkg/IncompatiblePciDeviceSupportDxe/IncompatiblePciDeviceSupport.inf
@@ -406,7 +401,6 @@ INF  QemuPkg/LinuxInitrdDynamicShellCommand/LinuxInitrdDynamicShellCommand.inf
   INF  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
 
   INF  PolicyServicePkg/PolicyService/DxeMm/PolicyDxe.inf
-  INF  SetupDataPkg/ConfApp/ConfApp.inf
 
   INF  NetworkPkg/TlsDxe/TlsDxe.inf
   INF  NetworkPkg/DnsDxe/DnsDxe.inf
@@ -431,7 +425,6 @@ INF  QemuQ35Pkg/QemuVideoDxe/QemuVideoDxe.inf
 INF  QemuQ35Pkg/QemuRamfbDxe/QemuRamfbDxe.inf
 INF  QemuQ35Pkg/IoMmuDxe/IoMmuDxe.inf
 
-!if $(SMM_ENABLED) == TRUE
 INF  QemuQ35Pkg/SmmControl2Dxe/SmmControl2Dxe.inf
 INF  QemuQ35Pkg/SmmAccess/SmmAccess2Dxe.inf
 !if $(PEI_MM_IPL_ENABLED) == TRUE
@@ -445,20 +438,14 @@ INF  QemuQ35Pkg/SmmAccess/SmmAccess2Dxe.inf
 !endif
 INF  MmSupervisorPkg/Core/MmSupervisorCore.inf
 INF  UefiCpuPkg/CpuIo2Smm/CpuIo2StandaloneMm.inf
-!endif
 
 #
 # Variable driver stack (SMM)
 #
-!if $(SMM_ENABLED) == TRUE
 INF  QemuQ35Pkg/QemuFlashFvbServicesRuntimeDxe/FvbServicesStandaloneMm.inf
 INF  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
 INF  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
 INF  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
-!else
-INF  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
-INF  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
-!endif
 
 #
 # TPM support
@@ -485,35 +472,26 @@ INF  MdeModulePkg/Universal/ReportStatusCodeRouter/Smm/ReportStatusCodeRouterSta
 INF  MdeModulePkg/Universal/Acpi/FirmwarePerformanceDataTableSmm/FirmwarePerformanceStandaloneMm.inf
 INF  MsCorePkg/MuVarPolicyFoundationDxe/MuVarPolicyFoundationDxe.inf
 INF MsCorePkg/LoadOptionVariablePolicyDxe/LoadOptionVariablePolicyDxe.inf
-!if $(SMM_ENABLED) == TRUE
 INF  MmSupervisorPkg/Drivers/MmSupervisorRing3Broker/MmSupervisorRing3Broker.inf
 INF  MmSupervisorPkg/Drivers/StandaloneMmUnblockMem/StandaloneMmUnblockMem.inf
 !if $(PERF_TRACE_ENABLE) == TRUE
 INF  MmSupervisorPkg/Drivers/MmSupervisorRing3Performance/MmSupervisorRing3Performance.inf
-!endif
 !endif
 # INF RuleOverride = DRIVER_ACPITABLE SecurityPkg/Tcg/Tcg2Smm/Tcg2Smm.inf
 # COMMENTED OUT DUE TO LACK OF TPM
 # INF  SecurityPkg/Tcg/MemoryOverwriteControl/TcgMor.inf
 INF  MdeModulePkg/Universal/EsrtFmpDxe/EsrtFmpDxe.inf
 INF  MdeModulePkg/Bus/Usb/UsbMouseAbsolutePointerDxe/UsbMouseAbsolutePointerDxe.inf
-INF  DfciPkg/Application/DfciMenu/DfciMenu.inf
 INF  MsGraphicsPkg/PrintScreenLogger/PrintScreenLogger.inf
 INF  SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
 INF  MsCorePkg/AcpiRGRT/AcpiRgrt.inf
 
-!if $(SMM_ENABLED) == TRUE
-  !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.DXE.inc.fdf
-  !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.STANDALONEMM_MMSUPV.inc.fdf
-!else
-  !include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.RUNTIMEDXE.inc.fdf
-!endif
+!include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.DXE.inc.fdf
+!include $(SHARED_CRYPTO_PATH)/Driver/Bin/CryptoDriver.STANDALONEMM_MMSUPV.inc.fdf
 
 !if $(BUILD_UNIT_TESTS) == TRUE
   # INF UefiTestingPkg/FunctionalSystemTests/SmmPagingProtectionsTest/Smm/SmmPagingProtectionsTestStandaloneMm.inf # NOT YET SUPPORTED
-!if $(SMM_ENABLED) == TRUE
   INF  MmSupervisorPkg/Test/MmPagingAuditTest/UEFI/MmPagingAuditApp.inf
-!endif
   # INF  UefiTestingPkg/AuditTests/PagingAudit/UEFI/DxePagingAuditDriver.inf
 !endif
 
@@ -522,9 +500,7 @@ INF PrmPkg/PrmConfigDxe/PrmConfigDxe.inf
 
 # PRM Sample Modules
 INF PrmPkg/Samples/PrmSampleAcpiParameterBufferModule/PrmSampleAcpiParameterBufferModule.inf
-#INF PrmPkg/Samples/PrmSampleHardwareAccessModule/PrmSampleHardwareAccessModule.inf
 INF PrmPkg/Samples/PrmSampleContextBufferModule/PrmSampleContextBufferModule.inf
-#INF AdvLoggerPkg/AdvLoggerOsConnectorPrm/AdvLoggerOsConnectorPrm.inf
 
 # PRM Module Loader Driver
 INF PrmPkg/PrmLoaderDxe/PrmLoaderDxe.inf
@@ -532,31 +508,16 @@ INF PrmPkg/PrmLoaderDxe/PrmLoaderDxe.inf
 # PRM SSDT Installation Driver
 INF PrmPkg/PrmSsdtInstallDxe/PrmSsdtInstallDxe.inf
 
-FILE FREEFORM = PCD(gDfciPkgTokenSpaceGuid.PcdDfciTimerFile) {
-    SECTION RAW = DfciPkg/Include/Resources/DfciWorking.bmp
-}
-FILE FREEFORM = PCD(gZeroTouchPkgTokenSpaceGuid.PcdZeroTouchCertificateFile) {
-    SECTION RAW = ZeroTouchPkg/Certs/ZeroTouch/ZtdRecovery.cer
-}
-
-  INF DfciPkg/IdentityAndAuthManager/IdentityAndAuthManagerDxe.inf
-  INF DfciPkg/SettingsManager/SettingsManagerDxe.inf
   INF MsGraphicsPkg/MsUiTheme/Dxe/MsUiThemeProtocol.inf
   INF MsGraphicsPkg/RenderingEngineDxe/RenderingEngineDxe.inf
   INF MsGraphicsPkg/DisplayEngineDxe/DisplayEngineDxe.inf
-  INF OemPkg/BootMenu/BootMenu.inf
-  INF QemuPkg/FrontPageButtons/FrontPageButtons.inf
-  INF OemPkg/FrontPage/FrontPage.inf
   INF PcBdsPkg/MsBootPolicy/MsBootPolicy.inf
   INF MdeModulePkg/Universal/BootManagerPolicyDxe/BootManagerPolicyDxe.inf
-  INF DfciPkg/DfciManager/DfciManager.inf
   INF MfciPkg/MfciDxe/MfciDxe.inf
   INF MsGraphicsPkg/OnScreenKeyboardDxe/OnScreenKeyboardDxe.inf
   INF MsGraphicsPkg/SimpleWindowManagerDxe/SimpleWindowManagerDxe.inf
   INF AdvLoggerPkg/Application/AdvancedLogDumper/AdvancedLogDumper.inf
-!if $(SMM_ENABLED) == TRUE
   INF MmSupervisorPkg/Drivers/MmSupervisorErrorReport/MmSupervisorErrorReport.inf
-!endif
   FILE APPLICATION=PCD(gPcBdsPkgTokenSpaceGuid.PcdShellFile) {
     SECTION PE32=$(OUTPUT_DIRECTORY)/$(TARGET)_$(TOOL_CHAIN_TAG)/X64/Shell.efi
     SECTION UI= "EdkShell"
@@ -564,24 +525,6 @@ FILE FREEFORM = PCD(gZeroTouchPkgTokenSpaceGuid.PcdZeroTouchCertificateFile) {
   FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdLogoFile) {
     SECTION RAW = Logo/patina_boot_logo.bmp
     SECTION UI = "Logo"
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdFrontPageLogoFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/FrontpageLogo.bmp
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdLowBatteryFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/LBAT.bmp
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdThermalFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/THOT.bmp
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdVolumeUpIndicatorFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/VolumeUp.bmp
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdFirmwareSettingsIndicatorFile) {
-    SECTION RAW = OemPkg/FrontPage/Resources/FirmwareSettings.bmp
-  }
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdBootFailIndicatorFile ) {
-    SECTION RAW = OemPkg/FrontPage/Resources/NoBoot.bmp
   }
   FILE FREEFORM = gMmSupervisorPolicyFileGuid {
     SECTION RAW = $(POLICY_BIN_PATH)

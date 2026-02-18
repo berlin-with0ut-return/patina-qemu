@@ -49,7 +49,7 @@ class CommonPlatform():
     PackagesSupported = ("QemuSbsaPkg",)
     ArchSupported = ("AARCH64",)
     TargetsSupported = ("DEBUG", "RELEASE", "NOOPT")
-    Scopes = ('qemu', 'qemusbsa', 'edk2-build', 'cibuild', 'configdata')
+    Scopes = ('qemu', 'qemusbsa', 'edk2-build', 'cibuild')
     WorkspaceRoot = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     PackagesPath = (
         "Platforms",
@@ -60,8 +60,6 @@ class CommonPlatform():
         "Common/PATINA_EDK2",
         "Silicon/Arm/MU_TIANO",
         "Silicon/Arm/TFA",
-        "Features/DFCI",
-        "Features/CONFIG",
         "Features/FFA",
     )
 
@@ -124,8 +122,6 @@ class SettingsManager(UpdateSettingsManager, SetupSettingsManager, PrEvalSetting
             RequiredSubmodule("Silicon/Arm/MU_TIANO", False, ".pytool/CISettings.py"),
             RequiredSubmodule("Silicon/Arm/TFA", True),
             RequiredSubmodule("Silicon/Arm/HAF", True),
-            RequiredSubmodule("Features/DFCI", True),
-            RequiredSubmodule("Features/CONFIG", True),
             RequiredSubmodule("Features/FFA", True),
         ]
 
