@@ -435,7 +435,7 @@ READ_LOCK_STATUS   = TRUE
   #
   # Graphic icons and logos
   #
-  FILE FREEFORM = PCD(gOemPkgTokenSpaceGuid.PcdLogoFile) {
+  FILE FREEFORM = PCD(gQemuPkgTokenSpaceGuid.PcdLogoFile) {
     SECTION RAW = Logo/patina_boot_logo.bmp
     SECTION UI = "Logo"
   }

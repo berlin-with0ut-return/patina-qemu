@@ -36,12 +36,6 @@ GetBootGraphic (
     case BG_SYSTEM_LOGO:
       g = PcdGetPtr (PcdLogoFile);
       break;
-    case BG_CRITICAL_OVER_TEMP:
-      g = PcdGetPtr (PcdThermalFile);
-      break;
-    case BG_CRITICAL_LOW_BATTERY:
-      g = PcdGetPtr (PcdLowBatteryFile);
-      break;
     default:
       DEBUG ((DEBUG_ERROR, "Unsupported Boot Graphic Type 0x%X\n", Graphic));
       return EFI_UNSUPPORTED;
@@ -58,5 +52,5 @@ EFIAPI
 GetBackgroundColor (
   )
 {
-  return PcdGet32 (PcdPostBackgroundColor);
+  return 0;
 }

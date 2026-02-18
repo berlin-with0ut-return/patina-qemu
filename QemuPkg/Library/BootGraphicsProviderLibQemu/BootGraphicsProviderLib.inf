@@ -25,7 +25,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  PcBdsPkg/PcBdsPkg.dec
+  QemuPkg/QemuPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MsGraphicsPkg/MsGraphicsPkg.dec
 
@@ -40,7 +40,4 @@
 
 
 [Pcd]
-  gOemPkgTokenSpaceGuid.PcdLogoFile
-  gOemPkgTokenSpaceGuid.PcdLowBatteryFile
-  gOemPkgTokenSpaceGuid.PcdThermalFile
-  gOemPkgTokenSpaceGuid.PcdPostBackgroundColor
+  gQemuPkgTokenSpaceGuid.PcdLogoFile
