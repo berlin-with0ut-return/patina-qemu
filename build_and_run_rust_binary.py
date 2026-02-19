@@ -34,6 +34,7 @@ def _parse_arguments() -> argparse.Namespace:
         --patina-dxe-core-repo (Path): Path to the QEMU Rust bin repository. Default is "../patina-dxe-core-qemu".
         --fw-patch-repo (Path): Path to the firmware patch repository. Default is "../patina-fw-patcher".
         --build-target (str): Build target, either DEBUG or RELEASE. Default is "DEBUG".
+        --no-build (bool): Skip building the Rust DXE Core and use the pre-built binary. Default is False.
         --platform (str): QEMU platform such as Q35. Default is "Q35".
         --toolchain (str): Toolchain to use for building. Default is "VS2022".
         --features (str): Feature set to pass to patina-dxe-core-qemu build
@@ -146,6 +147,16 @@ def _parse_arguments() -> argparse.Namespace:
         help="Feature set for patina-dxe-core-qemu build",
     )
     parser.add_argument(
+        "--no-build",
+        "-n",
+        action="store_true",
+        default=False,
+        help="Skip building the Rust DXE Core and use the pre-built binary at "
+        "the expected output path in the repository that builds the binary. "
+        "For example, the binary in the target binary directory relative to "
+        "--patina-dxe-core-repo.",
+    )
+    parser.add_argument(
         "--monitor-port",
         "-m",
         type=int,
@@ -188,6 +199,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
             - qemu_path: The path to the QEMU installation (None uses default).
             - patina_dxe_core_repo: The path to the patina-dxe-core-qemu repo.
             - ref_fd: The path to the file to use as a reference for patching.
+            - skip_build: Whether to skip building the Rust DXE Core.
             - toolchain: The toolchain used for building (e.g. VS2022).
     """
     if args.platform == "Q35":
@@ -403,6 +415,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
         "qemu_cmd": [executable] + qemu_args,
         "patina_dxe_core_repo": args.patina_dxe_core_repo,
         "ref_fd": ref_fd,
+        "skip_build": args.no_build,
         "toolchain": args.toolchain,
     }
 
@@ -419,6 +432,7 @@ def _print_configuration(settings: Dict[str, Path]) -> None:
             - 'fw_patch_repo': Path to the patina-fw-patcher repo.
             - 'qemu_cmd': The command to run QEMU with the specified settings.
             - 'patina_dxe_core_repo': Path to the patina-dxe-core-qemu repo.
+            - 'skip_build': Whether the build step is being skipped.
             - 'toolchain': The toolchain being used.
     """
     logging.info("== Current Configuration ==")
@@ -432,6 +446,7 @@ def _print_configuration(settings: Dict[str, Path]) -> None:
     logging.info(f" - FW Patch Repo: {settings['fw_patch_repo']}")
     logging.info(f" - Build Target: {settings['build_target']}")
     logging.info(f" - Toolchain: {settings['toolchain']}")
+    logging.info(f" - Skip Build: {settings['skip_build']}")
     logging.info(f" - QEMU Command Line: {settings['qemu_cmd']}")
 
 
@@ -533,13 +548,15 @@ def main() -> None:
     _print_configuration(settings)
 
     try:
-        if not settings["custom_efi"]:
+        if not settings["custom_efi"] and not settings["skip_build"]:
             build_start_time = timeit.default_timer()
             _build_rust_dxe_core(settings)
             build_end_time = timeit.default_timer()
             logging.info(
                 f"Rust DXE Core Build Time: {build_end_time - build_start_time:.2f} seconds.\n"
             )
+        elif settings["skip_build"]:
+            logging.info("[1]. Skipping build, using pre-built binary.\n")
 
         _patch_rust_binary(settings)
         end_time = timeit.default_timer()
