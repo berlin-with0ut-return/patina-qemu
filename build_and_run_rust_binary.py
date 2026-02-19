@@ -52,6 +52,7 @@ def _parse_arguments() -> argparse.Namespace:
         --platform (str): QEMU platform such as Q35. Default is "Q35".
         --toolchain (str): Toolchain to use for building. Default is "VS2022".
         --features (str): Feature set to pass to patina-dxe-core-qemu build
+        --core-count (int): Number of QEMU CPU cores. Default is 2.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
@@ -178,6 +179,12 @@ def _parse_arguments() -> argparse.Namespace:
         help="Port to use for QEMU monitor communication.",
     )
     parser.add_argument(
+        "--core-count",
+        type=int,
+        default=2,
+        help="Number of QEMU CPU cores.",
+    )
+    parser.add_argument(
         "--headless",
         action="store_true",
         default=False,
@@ -293,7 +300,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
 
         qemu_cmd_builder = (
             QemuCommandBuilder(qemu_exec, QemuArchitecture.Q35)
-            .with_cpu(core_count=4)
+            .with_cpu(core_count=args.core_count)
             .with_machine()
             .with_memory(8192 if args.os else 2048)
             .with_firmware(code_fd, var_store)
@@ -393,7 +400,7 @@ def _configure_settings(args: argparse.Namespace) -> Dict[str, Path]:
 
         qemu_cmd_builder = (
             QemuCommandBuilder(qemu_exec, QemuArchitecture.SBSA)
-            .with_cpu(core_count=4)
+            .with_cpu(core_count=args.core_count)
             .with_machine()
             .with_memory(8192 if args.os else 2048)
             .with_firmware(code_fd, var_store)
