@@ -125,14 +125,14 @@
   UefiBootManagerLib       |MdeModulePkg/Library/UefiBootManagerLib/UefiBootManagerLib.inf
   MsBootPolicyLib          |QemuPkg/Library/MsBootPolicyLibQemu/MsBootPolicyLib.inf
   DeviceBootManagerLib     |QemuPkg/Library/DeviceBootManagerLibQemu/DeviceBootManagerLib.inf
-  MsAltBootLib             |PcBdsPkg/Library/MsAltBootLibNull/MsAltBootLibNull.inf # interfaces with alternate boot variable
+  MsAltBootLib             |PcBdsPkg/Library/MsAltBootLibNull/MsAltBootLibNull.inf
   MsBootOptionsLib         |QemuPkg/Library/MsBootOptionsLibQemu/MsBootOptionsLib.inf # attached to BdsDxe to implement Microsoft extensions to UefiBootManagerLib.
   MsBootManagerSettingsLib |PcBdsPkg/Library/BootManagerSettingsDxeLibNull/BootManagerSettingsDxeLibNull.inf
 
   # UI and graphics
   BmpSupportLib            |MdeModulePkg/Library/BaseBmpSupportLib/BaseBmpSupportLib.inf
   BootLogoLib              |MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
-  BootGraphicsProviderLib  |QemuPkg/Library/BootGraphicsProviderLibQemu/BootGraphicsProviderLib.inf #  uses PCDs and raw files in the firmware volumes to get Pcd
+  BootGraphicsProviderLib  |QemuPkg/Library/BootGraphicsProviderLibQemu/BootGraphicsProviderLib.inf
   CustomizedDisplayLib     |MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
   FrameBufferBltLib        |MdeModulePkg/Library/FrameBufferBltLib/FrameBufferBltLib.inf
   FrameBufferMemDrawLib    |MsGraphicsPkg/Library/FrameBufferMemDrawLib/FrameBufferMemDrawLibDxe.inf
@@ -164,7 +164,6 @@
   # Capsule/Versioning Libraries
   DisplayUpdateProgressLib |MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
   CapsulePersistLib |MdeModulePkg/Library/CapsulePersistLibNull/CapsulePersistLibNull.inf
-  MuUefiVersionLib |PcBdsPkg/Library/MuUefiVersionLibNull/MuUefiVersionLibNull.inf
 
   # Sorter helper Libraries
   SortLib              |MdeModulePkg/Library/UefiSortLib/UefiSortLib.inf
@@ -195,7 +194,6 @@
   LockBoxLib            |MdeModulePkg/Library/LockBoxNullLib/LockBoxNullLib.inf
   PlatformSecureLib     |SecurityPkg/Library/PlatformSecureLibNull/PlatformSecureLibNull.inf
   PasswordStoreLib      |MsCorePkg/Library/PasswordStoreLibNull/PasswordStoreLibNull.inf
-  # PasswordPolicyLib     |OemPkg/Library/PasswordPolicyLib/PasswordPolicyLib.inf
   SecureBootVariableLib |SecurityPkg/Library/SecureBootVariableLib/SecureBootVariableLib.inf
   SecureBootKeyStoreLib |MsCorePkg/Library/BaseSecureBootKeyStoreLib/BaseSecureBootKeyStoreLib.inf
   PlatformPKProtectionLib|SecurityPkg/Library/PlatformPKProtectionLibVarPolicy/PlatformPKProtectionLibVarPolicy.inf
@@ -381,7 +379,6 @@
   PcdLib                     |MdePkg/Library/PeiPcdLib/PeiPcdLib.inf
   QemuFwCfgLib               |QemuQ35Pkg/Library/QemuFwCfgLib/QemuFwCfgPeiLib.inf
   PcdDatabaseLoaderLib       |MdeModulePkg/Library/PcdDatabaseLoaderLib/Pei/PcdDatabaseLoaderLibPei.inf
-  OemMfciLib                 |QemuPkg/Library/OemMfciLibQemu/OemMfciLibPei.inf
   PolicyLib                  |PolicyServicePkg/Library/PeiPolicyLib/PeiPolicyLib.inf
   SmmRelocationLib           |QemuQ35Pkg/Library/SmmRelocationLib/SmmRelocationLib.inf
 !if $(TPM_ENABLE) == TRUE
@@ -416,8 +413,6 @@
   TimerLib |QemuQ35Pkg/Library/AcpiTimerLib/DxeAcpiTimerLib.inf
   RngLib   |MdePkg/Library/DxeRngLib/DxeRngLib.inf
   PciLib   |QemuQ35Pkg/Library/DxePciLibI440FxQ35/DxePciLibI440FxQ35.inf
-
-  OemMfciLib |QemuPkg/Library/OemMfciLibQemu/OemMfciLibDxe.inf
 
 [LibraryClasses.common.DXE_CORE]
   HobLib                  |MdePkg/Library/DxeCoreHobLib/DxeCoreHobLib.inf
@@ -682,9 +677,6 @@
   # never lets the RAM below 4 GB exceed 2816 MB.
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress|0xB0000000
   gUefiCpuPkgTokenSpaceGuid.PcdCpuMaxLogicalProcessorNumber|$(QEMU_CORE_NUM)
-
-  # Use profile index 1
-  # gOemPkgTokenSpaceGuid.PcdActiveProfileIndex|0x1
 
   !if $(TARGET) == RELEASE
     gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerHdwPortDebugPrintErrorLevel|0x0
@@ -1408,7 +1400,6 @@ QemuQ35Pkg/ResetVector/ResetVector.inf
   MsGraphicsPkg/MsUiTheme/Pei/MsUiThemePpi.inf
   MsGraphicsPkg/MsEarlyGraphics/Pei/MsEarlyGraphics.inf
   MdeModulePkg/Universal/Acpi/FirmwarePerformanceDataTablePei/FirmwarePerformancePei.inf
-  QemuPkg/DeviceStatePeiQemu/DeviceStatePei.inf
   MfciPkg/MfciPei/MfciPei.inf
 
   PolicyServicePkg/PolicyService/Pei/PolicyPei.inf

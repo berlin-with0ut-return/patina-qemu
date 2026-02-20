@@ -309,7 +309,6 @@ READ_LOCK_STATUS   = TRUE
   # Policy and configuration
   #
   INF PolicyServicePkg/PolicyService/DxeMm/PolicyDxe.inf
-  INF QemuPkg/DeviceStateDxeQemu/DeviceStateDxe.inf
 
   #
   # MFCI support

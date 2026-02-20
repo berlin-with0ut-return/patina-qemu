@@ -254,7 +254,6 @@ INF  MdeModulePkg/Universal/ResetSystemPei/ResetSystemPei.inf
 INF  MsCorePkg/Universal/StatusCodeHandler/Serial/Pei/SerialStatusCodeHandlerPei.inf
 INF  MsCorePkg/Core/GuidedSectionExtractPeim/GuidedSectionExtract.inf
 INF  MsWheaPkg/MsWheaReport/Pei/MsWheaReportPei.inf
-INF  QemuPkg/DeviceStatePeiQemu/DeviceStatePei.inf
 INF  MfciPkg/MfciPei/MfciPei.inf
 
 INF  MsGraphicsPkg/MsUiTheme/Pei/MsUiThemePpi.inf
